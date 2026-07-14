@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Monster Quest</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .mq-wrap {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 20px 16px 120px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .mq-title {
+            font-size: 40px;
+            letter-spacing: 4px;
+            margin: 6px 0 2px;
+            color: #3a352d;
+        }
+
+        .mq-sub {
+            color: #8a8172;
+            font-size: 14px;
+            margin: 0 0 16px;
+        }
+
+        .mq-card {
+            background: #fbf7f0;
+            border: 1px solid rgba(60, 50, 35, 0.12);
+            box-shadow: 0 10px 30px rgba(120, 100, 70, 0.14);
+            border-radius: 18px;
+            padding: 14px;
+        }
+
+        /* 상단 정보줄 */
+        .mq-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #6f6656;
+        }
+        .mq-bar b { color: #0f7f60; }
+        .mq-bar button {
+            border: 0; border-radius: 14px; padding: 6px 12px; cursor: pointer;
+            background: #ede4d3; color: #6f6656; font-weight: 700; font-size: 12px;
+        }
+        .mq-bar button:hover { background: #e2d6c0; }
+
+        canvas#screen {
+            width: 100%;
+            max-width: 480px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto;
+            background: #9bd36a;
+            touch-action: manipulation;
+        }
+
+        /* 메시지 + 버튼 영역 */
+        .mq-msg {
+            min-height: 42px;
+            margin: 12px 4px 10px;
+            font-size: 15px;
+            line-height: 1.4;
+            color: #3a352d;
+            font-weight: 600;
+        }
+
+        .mq-btns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .mq-btns.hidden, .mq-hint.hidden, #dpad.hidden { display: none; }
+
+        .mq-btns button {
+            padding: 13px;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0f9d76, #14b88a);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(15, 157, 118, 0.28);
+            transition: transform .1s;
+        }
+        .mq-btns button:hover { transform: translateY(-2px); }
+        .mq-btns button:active { transform: translateY(1px); }
+        .mq-btns button.alt { background: linear-gradient(135deg, #6366f1, #7c74f4); box-shadow: 0 6px 16px rgba(99,102,241,.28); }
+        .mq-btns button.warn { background: linear-gradient(135deg, #ef8f3c, #f0a04b); box-shadow: 0 6px 16px rgba(239,143,60,.28); }
+        .mq-btns button:disabled { opacity: .45; cursor: default; transform: none; }
+
+        .mq-hint {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #8a8172;
+        }
+
+        /* 방향패드 (모바일/클릭용) */
+        #dpad {
+            margin: 12px auto 0;
+            width: 168px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 6px;
+        }
+        #dpad button {
+            height: 50px; border: 0; border-radius: 12px; cursor: pointer;
+            background: #ede4d3; color: #6f6656; font-size: 20px; font-weight: 800;
+        }
+        #dpad button:active { background: #d8c8ad; }
+        #dpad .sp { visibility: hidden; }
+
+        /* 도감 · 박스 패널 */
+        #dex-panel, #box-panel {
+            display: none;
+            text-align: left;
+            margin-top: 12px;
+            background: #fffdf8;
+            border: 1px solid rgba(60,50,35,.12);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 14px;
+            color: #3a352d;
+        }
+        #dex-panel h3, #box-panel h3 { margin: 0 0 8px; color: #0f7f60; }
+        #dex-panel .row, #box-panel .row { padding: 4px 0; border-bottom: 1px dashed rgba(60,50,35,.12); }
+        #dex-panel .row:last-child, #box-panel .row:last-child { border-bottom: 0; }
+        #dex-panel .muted, #box-panel .muted { color: #b3a892; }
+        #box-panel .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        #box-panel button {
+            border: 0; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700;
+            cursor: pointer; background: #3fbf5f; color: #fff; white-space: nowrap;
+        }
+        #box-panel button.to-box { background: #e0a34a; }
+        #box-panel button.release { background: #e05a5a; }
+        #box-panel button.heal { background: #2f9be0; }
+        #box-panel button:disabled { background: #d8d0c0; color: #a49a86; cursor: default; }
+        #box-panel .sub { font-weight: 700; margin: 8px 0 4px; color: #0f7f60; }
+    </style>
+</head>
+
+<body class="page light">
+
+    <nav class="navbar">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="journey.html">Journey</a>
+        <a href="projects.html" class="active">Projects</a>
+    </nav>
+
+    <div class="mq-wrap">
+        <h1 class="mq-title">MONSTER QUEST 🕹️</h1>
+        <p class="mq-sub">작은 왕국에서 몬스터를 모으고, 성의 챔피언을 이겨라!</p>
+
+        <div class="mq-card">
+            <div class="mq-bar">
+                <span>파티 <b id="party-count">0</b>/6 · 박스 <b id="box-count">0</b> · 도감 <b id="dex-count">0</b>/34</span>
+                <span>
+                    <button id="btn-box">박스</button>
+                    <button id="btn-dex">도감</button>
+                    <button id="btn-reset">새 게임</button>
+                </span>
+            </div>
+
+            <canvas id="screen" width="420" height="340"></canvas>
+
+            <div class="mq-msg" id="msg">스타터 몬스터를 골라 모험을 시작하세요!</div>
+
+            <div class="mq-btns" id="btns"></div>
+
+            <div id="dpad" class="hidden">
+                <button class="sp"></button><button data-dir="up">▲</button><button class="sp"></button>
+                <button data-dir="left">◀</button><button class="sp"></button><button data-dir="right">▶</button>
+                <button class="sp"></button><button data-dir="down">▼</button><button class="sp"></button>
+            </div>
+
+            <div class="mq-hint hidden" id="hint">방향키(또는 WASD)로 이동 · 진한 풀숲=야생 몬스터 · 💛 샘을 밟으면 파티 전체 회복</div>
+
+            <div id="box-panel"></div>
+            <div id="dex-panel"></div>
+        </div>
+    </div>
+
+    <div class="background"></div>
+
+
+    <script>
+    (function () {
+        "use strict";
+
+        const cv = document.getElementById("screen");
+        const g = cv.getContext("2d");
+        const msgEl = document.getElementById("msg");
+        const btnsEl = document.getElementById("btns");
+        const hintEl = document.getElementById("hint");
+        const dpadEl = document.getElementById("dpad");
+        const dexPanel = document.getElementById("dex-panel");
+        const boxPanel = document.getElementById("box-panel");
+        const partyCountEl = document.getElementById("party-count");
+        const dexCountEl = document.getElementById("dex-count");
+        const boxCountEl = document.getElementById("box-count");
+
+        /* =======================================================
+           도트 스프라이트 (왼쪽 절반만 정의 → 좌우 대칭으로 렌더)
+           ======================================================= */
+        const BODY_BASE = [
+            "....AA", "...OOO", "..OMMM", ".OMMMM",
+            "OMEEMM", "OMEPMM", "OMMMMM", "OMMMMM",
+            "OMBBMM", ".OMBMM", "..OMMM", "...OOO"
+        ];
+        const BODY_EVO = [
+            "..A..A", "...OOO", "..OMMM", ".OMMMM",
+            "OMEEMM", "OMEPMM", "OMMMMM", "OMSSMM",
+            "OMBBMM", "OMBBMM", "..OMMM", "...OOO"
+        ];
+        const HERO = [
+            "...CCC", "..CCCC", "..OFFF", "..FeFF",
+            "..OFFF", ".OSSSS", "OSSSSS", "OSSSSS",
+            ".OTTTT", ".OTTTT", "..O.O.", "..O.O."
+        ];
+
+        /* ---- 7타입 × 3단계(2번 진화) 스프라이트 ----
+           키: O윤곽 M본체 S음영 H하이라이트 E흰자 P눈동자 A뿔/장식 B배/코어
+               W날개/지느러미 T혀/스파크 C결정/보석 */
+
+        /* 불 = 도마뱀 → 드래곤 */
+        const FIRE_1 = ["...A..","..AAM.",".OMMMM","OMEPMM","OMMSMM",".OMMMM","WOMMMM","OMMBBB","OMMBBB",".OMMMM",".O.OM.",".A..A."];
+        const FIRE_2 = [".A.A..","..AOM.",".OMMMM","OMEPMM","OMMSMM",".OMMMM","WWOMMM","WWOMBB","WOMBBB",".OMBBB",".OMMMM",".A.A.."];
+        const FIRE_3 = [".A.A.A",".AOOOO","AOMMMM","OMEPMM","OMMSMM",".OMMMM","WWWOMM","WWWOMB","WWOMBB",".OMMBB",".OMMMM",".A.AMA"];
+
+        /* 물 = 물방울 정령 → 리바이어던 */
+        const WATER_1 = [".....A","....HA","..OHMM",".OHMMM","OHEPMM","OHMMMM","OHMBBB",".OHMBB",".OHMMM","..OMMM","...OMM","....OM"];
+        const WATER_2 = [".A.A.A",".HHHMM","HHMMMM","OHEPMM","OHMMMM","HHMBBB","HHMBBB","OHMBBB",".OHMMM","..OHMM","...OHM","....OM"];
+        const WATER_3 = ["A.A.A.",".AHHM.","WHMMMM","OHEPMM","OHMSMM","WHMMMM","WHMBBB","OHMBBB","OHMBBB",".OHMMM","..OHMM","...OHM"];
+
+        /* 풀 = 뱀 → 코브라 → 대사(大蛇) */
+        const GRASS_1 = ["....A.","..OMMM",".OMMMM","OMEPMM","OMMSMM","OMMTMM",".AMMMM","..OMMM","..OMBB","..OMMM","...OMM","....OM"];
+        const GRASS_2 = ["..AMMM",".OMMMM","OMEPMM","OMMSMM","OMMTMM","AMMMMM","AAMMMM","AAHMMM",".OMMMM","..OMBB","..OMMM","...OMM"];
+        const GRASS_3 = ["A.A.A.",".AMMMA","AMMMMM","OMEPMM","OMMSMM","OMMTMM","AMMMMM","AAMMMM","AAHMMM",".OMMMM","..OMBB","..OMMM"];
+
+        /* 전기 = 스파크 짐승 → 뇌수 */
+        const ELEC_1 = [".A....",".AOMM.",".OMMMM","OMEPMM","OMSMSM",".OMMMM","OMMBBB","OMMBBB",".OMMMM",".OM.MO","..TT..",".T..T."];
+        const ELEC_2 = [".A.A..",".AOMM.",".OMMMM","OMEPMM","OMSMSM",".OMMMM","TOMMMM","OMMBBB","OMMBBB",".OMMMM",".OM.MO",".T.T.T"];
+        const ELEC_3 = ["A.A.A.","TAOMMM","TOMMMM","OMEPMM","OMSMSM","TOMMMM","TOMMBB","OMMBBB","OMMBBB",".OMMMM",".OM.MO","T.T.T."];
+
+        /* 얼음 = 결정 정령 → 빙수 */
+        const ICE_1 = ["...C..","..OCM.",".OMMMM","OMEPMM","OMMSMM",".OMMMM","OMHBBB","OMHBBB",".OMMMM",".OMMMM",".O..O.",".C..C."];
+        const ICE_2 = ["..C.C.",".OCMC.",".OMMMM","OMEPMM","OMMSMM",".OMMMM","COMHBB","OMHBBB","OMHBBB",".OMMMM",".O..O.",".C..C."];
+        const ICE_3 = ["C.C.C.","COCMMC","COMMMM","OMEPMM","OMMSMM","COMMMM","COMHBB","OMHBBB","OMHBBB",".OMMMM",".OM.MO",".C..C."];
+
+        /* 바위 = 바위덩이 → 골렘 */
+        const ROCK_1 = ["AMMMMM","OMMMMM","OMEPMM","OMMSMM","OMMMMM","OMMBBB","OMMMMM",".OMMMM",".OMMMM",".O..O.","OO..OO",".A..A."];
+        const ROCK_2 = ["A.AA.A","OMMMMM","OMEPMM","OMMSMM","OMMMMM","AOMMMM","AOMBBB","OMMBBB",".OMMMM",".OM.MO","OO..OO",".A..A."];
+        const ROCK_3 = ["A.AA.A","AOMMMM","OMEPMM","OMMSMM","OMMCMM","AOMMMM","AAMBBB","AOMBBB","OMMMMM",".OMMMM","OOM.MO",".A..A."];
+
+        /* 드래곤 = 드레이크 → 그랜드 드래곤 (뿔 왕관·거대 날개) */
+        const DRAG_1 = ["..A...","..AOMM",".OMMMM","OMEPMM","OMMSMM",".OMMMM","WOMMMM","WOMBBB",".OMBBB",".OMMMM",".O..O.",".A..A."];
+        const DRAG_2 = [".A....",".AOOMM",".OMMMM","OMEPMM","OMMSMM",".OMMMM","WWOMMM","WWOMBB","WOMBBB",".OMMBB",".OMMMM",".A.A.A"];
+        const DRAG_3 = ["A.A.A.","AAOOOO","AOMMMM","OMEPMM","OMMSMM","WOMMMM","WWWOMM","WWWOMB","WWWOMB","WWOMBB",".OMMBB",".A.AMA"];
+
+        /* 비행 = 새 (부리 A·날개 W·꼬리깃) */
+        const FLY_1 = ["..OMM.",".OMMMM","OMEPMM","OMMMAM","WOMMMM","WOMBBB",".OMBBB",".OMMMM","..O.O.","..A.A.",".MMMM.","..MM.."];
+        const FLY_2 = [".OMMM.","OMMMMM","OMEPMM","OMMMAM","WWOMMM","WWOMBB","WOMBBB",".OMBBB","..O.O.","..A.A.",".MMMM.",".MMMM."];
+        const FLY_3 = [".A.A..","OMMMMM","OMEPMM","OMMMAM","WWWOMM","WWWOMB","WWOMBB",".OMBBB","..O.O.","..A.A.",".MMMM.","MMMMMM"];
+
+        /* 땅 = 두더지/맹수 (발톱 A·바위등딱지) */
+        const GRD_1 = ["..MMM.",".OMMMM","OMEPMM","OMMAMM",".OMMMM","OMMBBB","OMMBBB",".OMMMM",".OMMMM","AO..OA",".O..O.",".A..A."];
+        const GRD_2 = [".AMMA.","OMMMMM","OMEPMM","OMMAMM","AOMMMA","AOMBBA","OMMBBB",".OMMMM",".OMMMM","AO..OA",".O..O.",".A..A."];
+        const GRD_3 = ["A.AA.A","AOMMMM","OMEPMM","OMMAMM","AOMMMA","AAMBBA","AOMBBB","OMMMMM","OMMMMM","AO..OA","OO..OO",".A..A."];
+
+        /* 고스트 = 유령 (다리 없이 부유·너덜너덜한 하단) */
+        const GHT_1 = ["..OM..",".OMMMM","OMEPMM","OMMMMM","OMMMMM","OMMMMM",".OMMMM",".OMMMM","..OMMM","..MMMM",".M.MM.","M.M.M."];
+        const GHT_2 = [".OMMM.","OMMMMM","OMEPMM","OMMMMM","AOMMMA","AOMMMA","OMMMMM",".OMMMM",".OMMMM","..MMMM",".M.MM.","M.M.M."];
+        const GHT_3 = ["A.O.A.","OMMMMM","OMEPMM","OMMMMM","AOMMMA","AAMMMA","AOMMMM","OMMMMM",".OMMMM","..MMMM",".MMMM.","M.M.M."];
+
+        /* 강철 = 로봇/기사 (리벳 C·장갑 S·안테나 A) */
+        const STL_1 = ["...A..","..OMM.",".OMMMM","OMEPMM","OMMMMM","OMHCCM","OMHCCM",".OMMMM",".OMMMM",".O..O.","OO..OO",".M..M."];
+        const STL_2 = ["..A.A.",".OMMMM","OMEPMM","OMMMMM","SOMMMS","SOHCCM","OMHCCM",".OMMMM",".OMMMM",".OM.MO","OO..OO",".M..M."];
+        const STL_3 = ["A.A.A.","SOMMMM","OMEPMM","OMMMMM","SOMMMS","SSHCCS","SOHCCM","OMMMMM","OMMMMM","OOM.MO","OO..OO",".M..M."];
+
+        /* 전설 = 창공의 용신 (황금 뿔 왕관 · 거대 날개 · 빛나는 코어) */
+        const LEGEND = ["A.A.A.","AAOOOO","AOMMMM","OMEPMM","OMMSMM","WWWOMM","WWWOMC","WWWOCC","WWOMCB",".OMMBB",".OMMBB",".A.AMA"];
+
+        /* 타입별 팔레트 (한 계열은 색 공유, 실루엣으로 진화 표현) */
+        const PAL = {
+            fire:     { O:"#5a2b00", M:"#ff7a1a", S:"#d95e00", H:"#ffd08a", E:"#ffffff", P:"#221100", A:"#ffda3b", B:"#ffe6b8", W:"#c23e00", T:"#ff3b00", C:"#ffef9a" },
+            water:    { O:"#0a3350", M:"#3aa8ff", S:"#1f7fd0", H:"#cdefff", E:"#ffffff", P:"#0a2033", A:"#eafcff", B:"#dff4ff", W:"#1f7fd0", T:"#7fe0ff", C:"#eafcff" },
+            grass:    { O:"#14421a", M:"#3fbf5f", S:"#2a8f42", H:"#8fe6a3", E:"#ffffff", P:"#221100", A:"#7cf08a", B:"#d8f5c0", W:"#2a8f42", T:"#ff6b6b", C:"#eaffd0" },
+            electric: { O:"#5a4400", M:"#ffe23b", S:"#e0a500", H:"#fff6b0", E:"#ffffff", P:"#3a2a00", A:"#fff6b0", B:"#fff6c8", W:"#e0a500", T:"#fffb6a", C:"#fffb8f" },
+            ice:      { O:"#1f5a6e", M:"#9fe8ff", S:"#5cb8db", H:"#eafcff", E:"#ffffff", P:"#113344", A:"#eafcff", B:"#eafcff", W:"#5cb8db", T:"#dbffff", C:"#ffffff" },
+            rock:     { O:"#3a2a1a", M:"#a98a5f", S:"#7a5f3a", H:"#d8c29a", E:"#ffffff", P:"#221100", A:"#c9b48a", B:"#d8c29a", W:"#7a5f3a", T:"#a98a5f", C:"#9fe8ff" },
+            dragon:   { O:"#1a1035", M:"#7b5cff", S:"#4a2fd0", H:"#c4b6ff", E:"#ffffff", P:"#0d0522", A:"#e0d8ff", B:"#e2d8ff", W:"#5236c9", T:"#b6a6ff", C:"#cfe0ff" },
+            flying:   { O:"#4a3520", M:"#eadcc0", S:"#c2a878", H:"#fff8ea", E:"#ffffff", P:"#221100", A:"#ffab1f", B:"#fff2da", W:"#8a6a3a", T:"#ffab1f", C:"#fff8ea" },
+            ground:   { O:"#3a2a14", M:"#c79a58", S:"#8f6d38", H:"#e6cf98", E:"#ffffff", P:"#221100", A:"#efe0b6", B:"#e8d6a8", W:"#8f6d38", T:"#c79a58", C:"#9fe8ff" },
+            ghost:    { O:"#1e1030", M:"#8a5cc8", S:"#573a88", H:"#c9a8ff", E:"#eaffff", P:"#12002a", A:"#c060ff", B:"#b98ce0", W:"#573a88", T:"#c060ff", C:"#eaffff" },
+            steel:    { O:"#28313c", M:"#9ba7b6", S:"#67727f", H:"#e2eaf2", E:"#ffffff", P:"#111820", A:"#c2cad4", B:"#c8d0da", W:"#67727f", T:"#c2cad4", C:"#57d0ff" },
+            legend:   { O:"#5a1f4a", M:"#ff9ee0", S:"#e05fb0", H:"#ffe0f4", E:"#ffffff", P:"#3a0a2a", A:"#ffe14d", B:"#fff0fa", W:"#e05fb0", T:"#ffe14d", C:"#a0f0ff" },
+            hero:     { C:"#e23b3b", F:"#ffd6a8", e:"#221100", O:"#2b2016", S:"#2f6bd8", T:"#3a3a3a" }
+        };
+
+        function drawSprite(half, pal, x, y, sc) {
+            for (let r = 0; r < half.length; r++) {
+                const left = half[r];
+                const full = left + left.slice(0, -1).split("").reverse().join("");
+                for (let c = 0; c < full.length; c++) {
+                    const col = pal[full[c]];
+                    if (!col) continue;
+                    g.fillStyle = col;
+                    g.fillRect(x + c * sc, y + r * sc, sc, sc);
+                }
+            }
+        }
+        const SPRITE_W = 11; // full width in cells
+
+        /* =======================================================
+           몬스터 데이터
+           ======================================================= */
+        /* 7계열 × 3단계. evoLv = 진화 레벨(단계1→6, 단계2→12) */
+        const SPECIES = {
+            // 불
+            ember:   { name:"엠버",     type:"fire",     hp:22, atk:10, shape:FIRE_1,  pal:"fire",     evo:"blaze",    evoLv:6,  dex:1 },
+            blaze:   { name:"블레이즈", type:"fire",     hp:32, atk:15, shape:FIRE_2,  pal:"fire",     evo:"drakon",   evoLv:12, dex:2 },
+            drakon:  { name:"드라콘",   type:"fire",     hp:44, atk:20, shape:FIRE_3,  pal:"fire",     evo:null,       evoLv:0,  dex:3 },
+            // 물
+            drop:    { name:"드롭",     type:"water",    hp:23, atk:9,  shape:WATER_1, pal:"water",    evo:"tide",     evoLv:6,  dex:4 },
+            tide:    { name:"타이드",   type:"water",    hp:33, atk:14, shape:WATER_2, pal:"water",    evo:"leviath",  evoLv:12, dex:5 },
+            leviath: { name:"리바이던", type:"water",    hp:45, atk:19, shape:WATER_3, pal:"water",    evo:null,       evoLv:0,  dex:6 },
+            // 풀
+            sprout:  { name:"스프릿",   type:"grass",    hp:24, atk:9,  shape:GRASS_1, pal:"grass",    evo:"vine",     evoLv:6,  dex:7 },
+            vine:    { name:"바인",     type:"grass",    hp:34, atk:14, shape:GRASS_2, pal:"grass",    evo:"naga",     evoLv:12, dex:8 },
+            naga:    { name:"나가킹",   type:"grass",    hp:46, atk:18, shape:GRASS_3, pal:"grass",    evo:null,       evoLv:0,  dex:9 },
+            // 전기
+            spark:   { name:"스파키",   type:"electric", hp:22, atk:11, shape:ELEC_1,  pal:"electric", evo:"volt",     evoLv:6,  dex:10 },
+            volt:    { name:"볼트",     type:"electric", hp:31, atk:16, shape:ELEC_2,  pal:"electric", evo:"raiga",    evoLv:12, dex:11 },
+            raiga:   { name:"레이가",   type:"electric", hp:42, atk:21, shape:ELEC_3,  pal:"electric", evo:null,       evoLv:0,  dex:12 },
+            // 얼음
+            frost:   { name:"프로스티", type:"ice",      hp:24, atk:9,  shape:ICE_1,   pal:"ice",      evo:"glacia",   evoLv:6,  dex:13 },
+            glacia:  { name:"글래시아", type:"ice",      hp:34, atk:14, shape:ICE_2,   pal:"ice",      evo:"icerus",   evoLv:12, dex:14 },
+            icerus:  { name:"아이서스", type:"ice",      hp:46, atk:18, shape:ICE_3,   pal:"ice",      evo:null,       evoLv:0,  dex:15 },
+            // 바위
+            pebble:  { name:"페블",     type:"rock",     hp:28, atk:8,  shape:ROCK_1,  pal:"rock",     evo:"boulder",  evoLv:6,  dex:16 },
+            boulder: { name:"볼더",     type:"rock",     hp:40, atk:13, shape:ROCK_2,  pal:"rock",     evo:"golem",    evoLv:12, dex:17 },
+            golem:   { name:"골렘킹",   type:"rock",     hp:54, atk:17, shape:ROCK_3,  pal:"rock",     evo:null,       evoLv:0,  dex:18 },
+            // 드래곤
+            drake:   { name:"드레이크", type:"dragon",   hp:26, atk:11, shape:DRAG_1,  pal:"dragon",   evo:"wyvern",   evoLv:6,  dex:19 },
+            wyvern:  { name:"와이번",   type:"dragon",   hp:36, atk:16, shape:DRAG_2,  pal:"dragon",   evo:"dragonia", evoLv:12, dex:20 },
+            dragonia:{ name:"드래고니아",type:"dragon",  hp:50, atk:22, shape:DRAG_3,  pal:"dragon",   evo:null,       evoLv:0,  dex:21 },
+            // 비행
+            birdy:   { name:"버디",     type:"flying",   hp:22, atk:10, shape:FLY_1,   pal:"flying",   evo:"falcon",   evoLv:6,  dex:22 },
+            falcon:  { name:"팰컨",     type:"flying",   hp:33, atk:15, shape:FLY_2,   pal:"flying",   evo:"skyron",   evoLv:12, dex:23 },
+            skyron:  { name:"스카이론", type:"flying",   hp:45, atk:20, shape:FLY_3,   pal:"flying",   evo:null,       evoLv:0,  dex:24 },
+            // 땅
+            moly:    { name:"몰리",     type:"ground",   hp:26, atk:9,  shape:GRD_1,   pal:"ground",   evo:"digdon",   evoLv:6,  dex:25 },
+            digdon:  { name:"디그던",   type:"ground",   hp:38, atk:14, shape:GRD_2,   pal:"ground",   evo:"terron",   evoLv:12, dex:26 },
+            terron:  { name:"테라곤",   type:"ground",   hp:52, atk:18, shape:GRD_3,   pal:"ground",   evo:null,       evoLv:0,  dex:27 },
+            // 고스트
+            wisp:    { name:"위습",     type:"ghost",    hp:23, atk:11, shape:GHT_1,   pal:"ghost",    evo:"phantom",  evoLv:6,  dex:28 },
+            phantom: { name:"팬텀",     type:"ghost",    hp:34, atk:16, shape:GHT_2,   pal:"ghost",    evo:"reaper",   evoLv:12, dex:29 },
+            reaper:  { name:"리퍼",     type:"ghost",    hp:46, atk:21, shape:GHT_3,   pal:"ghost",    evo:null,       evoLv:0,  dex:30 },
+            // 강철
+            nutz:    { name:"너트",     type:"steel",    hp:30, atk:8,  shape:STL_1,   pal:"steel",    evo:"gearo",    evoLv:6,  dex:31 },
+            gearo:   { name:"기어로",   type:"steel",    hp:42, atk:13, shape:STL_2,   pal:"steel",    evo:"steelon",  evoLv:12, dex:32 },
+            steelon: { name:"스틸론",   type:"steel",    hp:56, atk:17, shape:STL_3,   pal:"steel",    evo:null,       evoLv:0,  dex:33 },
+            // 전설 (페어리) — 동굴 심층에 잠든 초강력 몬스터
+            zephyros:{ name:"제피로스", type:"fairy",    hp:100, atk:30, shape:LEGEND, pal:"legend",  evo:null,       evoLv:0,  dex:34, legend:true }
+        };
+        const TYPE_KR = { fire:"불", water:"물", grass:"풀", electric:"전기", ice:"얼음", rock:"바위", dragon:"드래곤", flying:"비행", ground:"땅", ghost:"고스트", steel:"강철", fairy:"페어리", normal:"노말" };
+        const TYPE_COLOR = { fire:"#ff6b2a", water:"#3aa8ff", grass:"#3fbf5f", electric:"#e6b800", ice:"#54c6f0", rock:"#a5844e", dragon:"#7b5cff", flying:"#8aa0e0", ground:"#c1913f", ghost:"#8a5cc8", steel:"#7f8b9c", fairy:"#f57bc4", normal:"#9a9284" };
+
+        /* 진화 단계별 스킬셋 (species 키로 조회)
+           - 1단계: 기본 전용기 + 몸통박치기
+           - 2단계: 고위력 전용기 + 상태이상(eff) 부여
+           - 최종:  최상위 전용기 + '서브웨폰'(약점타입을 1배로 견제하는 다른 타입기) 추가
+           eff: {kind:'st', st:'burn|poison|paralyze|freeze', chance} | {kind:'weaken', chance} | {kind:'flinch', chance} */
+        const NORM = { n:"몸통박치기", p:28, t:"normal" };
+        const MOVESETS = {
+            // 불 — 상태이상: 화상 / 최종 서브웨폰: 용의숨결(물·바위 상대 1배 견제)
+            ember:    [{ n:"불꽃",     p:40, t:"fire" }, NORM],
+            blaze:    [{ n:"화염방사", p:55, t:"fire", eff:{kind:'st', st:'burn', chance:0.3} }, NORM],
+            drakon:   [{ n:"오버히트", p:62, t:"fire", eff:{kind:'st', st:'burn', chance:0.35} }, { n:"용의숨결", p:45, t:"dragon" }, NORM],
+            // 물 — 상태이상: 공격약화 / 서브웨폰: 암석포(풀·전기 상대 1배)
+            drop:     [{ n:"물대포",     p:40, t:"water" }, NORM],
+            tide:     [{ n:"하이드로펌프", p:55, t:"water", eff:{kind:'weaken', chance:0.35} }, NORM],
+            leviath:  [{ n:"해일",       p:62, t:"water", eff:{kind:'weaken', chance:0.4} }, { n:"암석포", p:45, t:"rock" }, NORM],
+            // 풀 — 상태이상: 독 / 서브웨폰: 용의분노(불·얼음 상대 1배)
+            sprout:   [{ n:"잎날가르기", p:40, t:"grass" }, NORM],
+            vine:     [{ n:"기가드레인", p:54, t:"grass", eff:{kind:'st', st:'poison', chance:0.3} }, NORM],
+            naga:     [{ n:"솔라빔",     p:62, t:"grass", eff:{kind:'st', st:'poison', chance:0.35} }, { n:"용의분노", p:45, t:"dragon" }, NORM],
+            // 전기 — 상태이상: 마비 / 서브웨폰: 바위깨기(풀·드래곤 상대 1배)
+            spark:    [{ n:"전기쇼크", p:40, t:"electric" }, NORM],
+            volt:     [{ n:"번개",     p:55, t:"electric", eff:{kind:'st', st:'paralyze', chance:0.3} }, NORM],
+            raiga:    [{ n:"플라즈마", p:62, t:"electric", eff:{kind:'st', st:'paralyze', chance:0.35} }, { n:"바위깨기", p:45, t:"rock" }, NORM],
+            // 얼음 — 상태이상: 동상 / 서브웨폰: 전격(불·바위 상대 1배)
+            frost:    [{ n:"얼음숨결", p:40, t:"ice" }, NORM],
+            glacia:   [{ n:"눈보라",   p:55, t:"ice", eff:{kind:'st', st:'freeze', chance:0.25} }, NORM],
+            icerus:   [{ n:"블리자드", p:62, t:"ice", eff:{kind:'st', st:'freeze', chance:0.3} }, { n:"전격", p:45, t:"electric" }, NORM],
+            // 바위 — 상태이상: 위축(플린치) / 서브웨폰: 용의숨결(물·풀 상대 1배)
+            pebble:   [{ n:"돌떨구기", p:42, t:"rock" }, NORM],
+            boulder:  [{ n:"스톤에지", p:56, t:"rock", eff:{kind:'flinch', chance:0.3} }, NORM],
+            golem:    [{ n:"메테오",   p:64, t:"rock", eff:{kind:'flinch', chance:0.3} }, { n:"용의숨결", p:45, t:"dragon" }, NORM],
+            // 드래곤 — 상태이상: 위압(공격약화) / 서브웨폰: 암석포(얼음 견제)
+            drake:    [{ n:"용의숨결", p:42, t:"dragon" }, NORM],
+            wyvern:   [{ n:"드래곤클로", p:56, t:"dragon", eff:{kind:'weaken', chance:0.35} }, NORM],
+            dragonia: [{ n:"용성군",     p:64, t:"dragon", eff:{kind:'weaken', chance:0.4} }, { n:"암석포", p:45, t:"rock" }, NORM],
+            // 비행 — 위축 / 서브웨폰: 강철날개
+            birdy:    [{ n:"날개치기",   p:40, t:"flying" }, NORM],
+            falcon:   [{ n:"에어슬래시", p:55, t:"flying", eff:{kind:'flinch', chance:0.3} }, NORM],
+            skyron:   [{ n:"폭풍",       p:62, t:"flying", eff:{kind:'flinch', chance:0.3} }, { n:"강철날개", p:45, t:"steel" }, NORM],
+            // 땅 — 공격약화 / 서브웨폰: 얼음엄니
+            moly:     [{ n:"진흙샷",     p:40, t:"ground" }, NORM],
+            digdon:   [{ n:"땅가르기",   p:55, t:"ground", eff:{kind:'weaken', chance:0.35} }, NORM],
+            terron:   [{ n:"지진",       p:64, t:"ground", eff:{kind:'weaken', chance:0.4} }, { n:"얼음엄니", p:45, t:"ice" }, NORM],
+            // 고스트 — 공포(공격약화) / 서브웨폰: 용의숨결
+            wisp:     [{ n:"제령",       p:40, t:"ghost" }, NORM],
+            phantom:  [{ n:"섀도볼",     p:55, t:"ghost", eff:{kind:'weaken', chance:0.35} }, NORM],
+            reaper:   [{ n:"허깨비",     p:62, t:"ghost", eff:{kind:'weaken', chance:0.4} }, { n:"용의숨결", p:45, t:"dragon" }, NORM],
+            // 강철 — 위축 / 서브웨폰: 암석포
+            nutz:     [{ n:"메탈샷",     p:40, t:"steel" }, NORM],
+            gearo:    [{ n:"아이언헤드", p:55, t:"steel", eff:{kind:'flinch', chance:0.3} }, NORM],
+            steelon:  [{ n:"기가임팩트", p:64, t:"steel", eff:{kind:'flinch', chance:0.3} }, { n:"암석포", p:45, t:"rock" }, NORM],
+            // 전설 (페어리) — 초고위력 전용기 + 상태이상
+            zephyros: [{ n:"문블래스트", p:72, t:"fairy", eff:{kind:'weaken', chance:0.4} }, { n:"매혹의목소리", p:66, t:"fairy", eff:{kind:'st', st:'paralyze', chance:0.3} }, { n:"신위의폭풍", p:64, t:"flying" }]
+        };
+        const STATUS_KR = { burn:"화상", poison:"독", paralyze:"마비", freeze:"동상" };
+        /* 포켓몬식 상성 (효과 굉장함 2배 / 별로 0.5배). 미기재는 1배 */
+        const CHART = {
+            fire:     { grass:2, ice:2, steel:2, water:0.5, fire:0.5, rock:0.5, dragon:0.5 },
+            water:    { fire:2, rock:2, ground:2, water:0.5, grass:0.5, dragon:0.5 },
+            grass:    { water:2, rock:2, ground:2, fire:0.5, grass:0.5, dragon:0.5, flying:0.5, steel:0.5 },
+            electric: { water:2, flying:2, grass:0.5, electric:0.5, dragon:0.5, ground:0 },
+            ice:      { grass:2, ground:2, flying:2, dragon:2, fire:0.5, water:0.5, ice:0.5, steel:0.5 },
+            rock:     { fire:2, ice:2, flying:2, ground:0.5, steel:0.5 },
+            dragon:   { dragon:2, steel:0.5, fairy:0 },
+            flying:   { grass:2, electric:0.5, rock:0.5, steel:0.5 },
+            ground:   { fire:2, electric:2, rock:2, steel:2, grass:0.5, flying:0 },
+            ghost:    { ghost:2 },
+            steel:    { ice:2, rock:2, fairy:2, fire:0.5, water:0.5, electric:0.5, steel:0.5 },
+            fairy:    { dragon:2, fire:0.5, steel:0.5 },
+            normal:   { rock:0.5, steel:0.5, ghost:0 }
+        };
+        function typeMult(atkT, defT) {
+            return (CHART[atkT] && CHART[atkT][defT] !== undefined) ? CHART[atkT][defT] : 1;
+        }
+
+        function maxHpOf(m) { return Math.floor(SPECIES[m.key].hp + m.level * 6 + 3); }
+        function atkOf(m)   { return Math.floor(SPECIES[m.key].atk + m.level * 2); }
+        function movesOf(m) { return MOVESETS[m.key] || [NORM]; }
+        function resetStatus(m) { m.st = null; m.atkMod = 1; m.flinch = false; }
+        function expNeed(lv){ return lv * 10; }
+
+        function makeMon(key, level) {
+            const m = { key: key, level: level, exp: 0, hp: 0 };
+            m.hp = maxHpOf(m);
+            return m;
+        }
+
+        /* =======================================================
+           맵
+           ======================================================= */
+        const MAPS = {
+            // 마을(오버월드) — 넓은 초원 + 풀숲(야생) + 연못 W + 나무 T + 바위 R + 성
+            town: { cols:17, rows:15, grid:[
+                "#################",
+                "#####CCCCCCC#####",
+                "#####CCCDCCC#####",
+                "#......C.C......#",
+                "#..~~~.....~~~..#",
+                "#..~~~.....~~~..#",
+                "#.....T...T.....#",
+                "#.WW.........RR.#",
+                "#.WW..~~~....RR.#",
+                "#.....~~~.......#",
+                "#....RRRRRRR....#",
+                "#...RRRRRRRRR...#",
+                "#...RRR.O.RRR...#",
+                "#H.....P.......T#",
+                "#################"
+            ]},
+            // 성 내부 — 접수처 N(도전 수락) → 사천왕1~4(1234) → 회복샘 H → 챔피언 K. X=출구
+            castle: { cols:7, rows:15, grid:[
+                "#######",
+                "###K###",
+                "##HHH##",
+                "###4###",
+                "###.###",
+                "###3###",
+                "###.###",
+                "###2###",
+                "###.###",
+                "###1###",
+                "###.###",
+                "###N###",
+                "###.###",
+                "###X###",
+                "#######"
+            ]},
+            // 전설의 동굴 — 심층에 페어리 전설 L, 아래 X로 탈출
+            cave: { cols:11, rows:11, grid:[
+                "###########",
+                "#####L#####",
+                "####...####",
+                "###.....###",
+                "##.......##",
+                "#.........#",
+                "##.......##",
+                "###.....###",
+                "####...####",
+                "#####X#####",
+                "###########"
+            ]}
+        };
+        function curMap()   { return MAPS[G.map] || MAPS.town; }
+        function tileSize()  { const m = curMap(); return Math.floor(Math.min(420 / m.cols, 340 / m.rows)); }
+        function offX()      { const m = curMap(); return Math.floor((420 - m.cols * tileSize()) / 2); }
+        function offY()      { const m = curMap(); return Math.floor((340 - m.rows * tileSize()) / 2); }
+
+        function tileAt(x, y) {
+            const m = curMap();
+            if (y < 0 || y >= m.rows || x < 0 || x >= m.cols) return "#";
+            return m.grid[y][x];
+        }
+        function blocked(ch) { return "#TWCR".indexOf(ch) >= 0; }
+
+        /* =======================================================
+           게임 상태 + 저장
+           ======================================================= */
+        let G = null;
+        function freshState() {
+            return { started:false, party:[], box:[], dex:[], champ:false, map:"town", px:7, py:13, eliteBeaten:[false,false,false,false], run:false, legendCaught:false };
+        }
+        function save() {
+            try { localStorage.setItem("mquest", JSON.stringify(G)); } catch (e) {}
+        }
+        function load() {
+            try {
+                const s = JSON.parse(localStorage.getItem("mquest"));
+                if (s && s.party) return s;
+            } catch (e) {}
+            return null;
+        }
+
+        function updateBar() {
+            partyCountEl.textContent = G.party.length;
+            dexCountEl.textContent = G.dex.length;
+            boxCountEl.textContent = (G.box ? G.box.length : 0);
+        }
+        function addToDex(key) { if (G.dex.indexOf(key) === -1) G.dex.push(key); }
+
+        /* =======================================================
+           화면 그리기 — 필드
+           ======================================================= */
+        function drawOverworld() {
+            const m = curMap(), T = tileSize(), ox = offX(), oy = offY();
+            g.clearRect(0, 0, 420, 340);
+            g.fillStyle = G.map === "castle" ? "#241d33" : G.map === "cave" ? "#15101f" : "#8fce5f";
+            g.fillRect(0, 0, 420, 340);
+
+            for (let y = 0; y < m.rows; y++) {
+                for (let x = 0; x < m.cols; x++) {
+                    const ch = m.grid[y][x];
+                    const px = ox + x * T, py = oy + y * T;
+                    if (G.map === "castle") drawCastleTile(ch, px, py, T);
+                    else if (G.map === "cave") drawCaveTile(ch, px, py, T, x, y);
+                    else drawTownTile(ch, px, py, T, x, y);
+                }
+            }
+
+            // 플레이어
+            const sc = T / 14;
+            const hx = ox + G.px * T + (T - 11 * sc) / 2;
+            const hy = oy + G.py * T + (T - 12 * sc) / 2;
+            drawSprite(HERO, PAL.hero, hx, hy, sc);
+        }
+
+        function drawTownTile(ch, px, py, T, x, y) {
+            g.fillStyle = ((x + y) % 2 === 0) ? "#8fce5f" : "#86c657";
+            g.fillRect(px, py, T, T);
+            if (ch === "~") {
+                g.fillStyle = "#4c9e3f"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#3d8534";
+                for (let i = 0; i < 3; i++) {
+                    const bx = px + 4 + i * (T / 3);
+                    g.fillRect(bx, py + T * 0.55, 2, T * 0.3);
+                    g.fillRect(bx + 1, py + T * 0.38, 2, T * 0.24);
+                }
+            } else if (ch === "#" || ch === "T") {
+                // 나무
+                g.fillStyle = "#6b3d1a"; g.fillRect(px + T/2 - 2, py + T - T*0.4, 4, T*0.4);
+                g.fillStyle = "#2f7d2f"; g.beginPath(); g.arc(px + T/2, py + T*0.42, T*0.36, 0, Math.PI*2); g.fill();
+                g.fillStyle = "#3fa03f"; g.beginPath(); g.arc(px + T*0.4, py + T*0.36, T*0.22, 0, Math.PI*2); g.fill();
+            } else if (ch === "W") {
+                g.fillStyle = "#3f8fe0"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#7fc0ff"; g.fillRect(px + 3, py + 4, T*0.4, 3);
+            } else if (ch === "R") {
+                g.fillStyle = "#9a9184"; g.beginPath(); g.arc(px + T/2, py + T*0.6, T*0.34, 0, Math.PI*2); g.fill();
+                g.fillStyle = "#b9b2a6"; g.beginPath(); g.arc(px + T*0.42, py + T*0.5, T*0.16, 0, Math.PI*2); g.fill();
+            } else if (ch === "C") {
+                g.fillStyle = "#b9b2a6"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#cfc8bc"; for (let i = 0; i < 3; i++) g.fillRect(px + 2 + i*(T/3), py, T*0.2, 5);
+            } else if (ch === "D") {
+                g.fillStyle = "#b9b2a6"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#3a2a18"; g.fillRect(px + T*0.25, py + T*0.2, T*0.5, T*0.8);
+                g.fillStyle = "#d4af37"; g.fillRect(px + T/2 - 2, py + T*0.55, 4, 4);
+            } else if (ch === "H") {
+                g.fillStyle = "#cfe3ff"; g.beginPath(); g.arc(px + T/2, py + T/2, T*0.4, 0, Math.PI*2); g.fill();
+                g.fillStyle = "#5aa9ff"; g.beginPath(); g.arc(px + T/2, py + T/2, T*0.27, 0, Math.PI*2); g.fill();
+                g.font = "bold " + Math.floor(T*0.5) + "px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+                g.fillText("💛", px + T/2, py + T/2 + 1); g.textBaseline = "alphabetic";
+            } else if (ch === "O") {
+                // 동굴 입구 (바위산 아치)
+                g.fillStyle = "#6b5f52"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#8a7d6c"; g.fillRect(px + 2, py + 2, T - 4, T * 0.28);
+                g.fillStyle = "#0d0b10";
+                g.beginPath(); g.arc(px + T / 2, py + T * 0.62, T * 0.32, Math.PI, 0); g.fill();
+                g.fillRect(px + T * 0.18, py + T * 0.62, T * 0.64, T * 0.38);
+                g.fillStyle = "#f57bc4"; g.font = "bold " + Math.floor(T * 0.36) + "px system-ui";
+                g.textAlign = "center"; g.textBaseline = "middle";
+                g.fillText("✦", px + T / 2, py + T * 0.66); g.textBaseline = "alphabetic";
+            }
+        }
+
+        const ELITE = [
+            { name:"질풍의 아리아", team:["falcon","digdon","skyron"] },
+            { name:"심연의 모르가나", team:["phantom","wisp","reaper"] },
+            { name:"강철의 바스티온", team:["gearo","boulder","steelon"] },
+            { name:"빙룡의 카이런",   team:["glacia","wyvern","icerus"] }
+        ];
+        function drawCastleTile(ch, px, py, T) {
+            // 바닥
+            g.fillStyle = "#3a3350"; g.fillRect(px, py, T, T);
+            g.strokeStyle = "#2a2440"; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+            if (ch === "#") {
+                g.fillStyle = "#544a6e"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#6b5f8c"; g.fillRect(px + 2, py + 2, T - 4, T*0.35);
+            } else if (ch === "H") {
+                g.fillStyle = "#cfe3ff"; g.beginPath(); g.arc(px + T/2, py + T/2, T*0.38, 0, Math.PI*2); g.fill();
+                g.fillStyle = "#5aa9ff"; g.beginPath(); g.arc(px + T/2, py + T/2, T*0.25, 0, Math.PI*2); g.fill();
+                g.font = "bold " + Math.floor(T*0.45) + "px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+                g.fillText("💛", px + T/2, py + T/2 + 1); g.textBaseline = "alphabetic";
+            } else if (ch === "X") {
+                g.fillStyle = "#1a1626"; g.fillRect(px + T*0.15, py + T*0.15, T*0.7, T*0.7);
+                g.fillStyle = "#8a8172"; for (let i = 0; i < 3; i++) g.fillRect(px + T*0.2, py + T*0.3 + i*(T*0.18), T*0.6, T*0.08);
+            } else if (ch === "N") {
+                // 접수처 카운터
+                g.fillStyle = "#7a5a2a"; g.fillRect(px + T*0.12, py + T*0.42, T*0.76, T*0.5);
+                g.fillStyle = "#c9a24a"; g.fillRect(px + T*0.12, py + T*0.42, T*0.76, T*0.12);
+                g.font = "bold " + Math.floor(T*0.5) + "px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+                g.fillText("📋", px + T/2, py + T*0.28); g.textBaseline = "alphabetic";
+            } else if ("1234".indexOf(ch) >= 0) {
+                const idx = "1234".indexOf(ch);
+                const beaten = G.eliteBeaten[idx];
+                if (!beaten) {
+                    g.fillStyle = "#d24a7a"; g.beginPath(); g.arc(px + T/2, py + T*0.42, T*0.3, 0, Math.PI*2); g.fill();
+                    g.fillStyle = "#ffe0ec"; g.fillRect(px + T*0.4, py + T*0.55, T*0.2, T*0.3);
+                    g.fillStyle = "#fff"; g.font = "bold " + Math.floor(T*0.4) + "px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+                    g.fillText(ch, px + T/2, py + T*0.42); g.textBaseline = "alphabetic";
+                }
+            } else if (ch === "K") {
+                if (!G.champ) {
+                    g.fillStyle = "#d4af37"; g.fillRect(px + T*0.3, py + T*0.15, T*0.4, T*0.55);
+                    g.fillStyle = "#8a5cc8"; g.beginPath(); g.arc(px + T/2, py + T*0.4, T*0.24, 0, Math.PI*2); g.fill();
+                    g.fillStyle = "#fff"; g.font = "bold " + Math.floor(T*0.4) + "px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+                    g.fillText("♛", px + T/2, py + T*0.42); g.textBaseline = "alphabetic";
+                }
+            }
+        }
+
+        function drawCaveTile(ch, px, py, T, x, y) {
+            // 어두운 동굴 바닥
+            g.fillStyle = ((x + y) % 2 === 0) ? "#2a2333" : "#241e2e";
+            g.fillRect(px, py, T, T);
+            if (ch === "#") {
+                g.fillStyle = "#4a3f5e"; g.fillRect(px, py, T, T);
+                g.fillStyle = "#5c4f72"; g.fillRect(px + 2, py + 2, T - 4, T * 0.35);
+                g.fillStyle = "#37304a"; g.fillRect(px, py + T * 0.72, T, T * 0.28);
+            } else if (ch === "X") {
+                // 탈출 계단(빛)
+                g.fillStyle = "#cfe3ff"; g.beginPath(); g.arc(px + T / 2, py + T / 2, T * 0.36, 0, Math.PI * 2); g.fill();
+                g.fillStyle = "#7fb0ff"; for (let i = 0; i < 3; i++) g.fillRect(px + T * 0.22, py + T * 0.3 + i * (T * 0.16), T * 0.56, T * 0.08);
+            } else if (ch === "L" && !G.legendCaught) {
+                // 필드 위 전설 몬스터 (핑크빛 오라)
+                g.fillStyle = "rgba(245,123,196,0.28)";
+                g.beginPath(); g.arc(px + T / 2, py + T / 2, T * 0.62, 0, Math.PI * 2); g.fill();
+                g.fillStyle = "rgba(160,240,255,0.22)";
+                g.beginPath(); g.arc(px + T / 2, py + T / 2, T * 0.42, 0, Math.PI * 2); g.fill();
+                const sc = T / 11;
+                drawSprite(SPECIES.zephyros.shape, PAL.legend, px + (T - 11 * sc) / 2, py + (T - 12 * sc) / 2, sc);
+            }
+        }
+
+        /* =======================================================
+           화면 그리기 — 배틀
+           ======================================================= */
+        // 진화 단계별 크기: 1단계 작게 → 최종 크게 (진화 시 성장 연출)
+        const STAGE1 = ["ember","drop","sprout","spark","frost","pebble","drake","birdy","moly","wisp","nutz"];
+        const STAGE3 = ["drakon","leviath","naga","raiga","icerus","golem","dragonia","skyron","terron","reaper","steelon"];
+        function sizeOf(key) { return key === "zephyros" ? 1.45 : STAGE1.indexOf(key) >= 0 ? 0.82 : STAGE3.indexOf(key) >= 0 ? 1.22 : 1.0; }
+        // 스프라이트를 (cx,footY) 기준으로 하단 중앙 정렬해 그린다
+        function drawMon(key, cx, footY, baseScale) {
+            const sc = baseScale * sizeOf(key);
+            drawSprite(SPECIES[key].shape, PAL[SPECIES[key].pal], cx - 11 * sc / 2, footY - 12 * sc, sc);
+        }
+
+        function drawBattle() {
+            g.clearRect(0, 0, 420, 340);
+            // 배경 (하늘 + 땅) — 챔피언전은 웅장한 왕좌의 방
+            const champ = B && B.type === "champion";
+            const legend = B && B.type === "legend";
+            g.fillStyle = champ ? "#3a2560" : legend ? "#3a1440" : "#cfe8ff"; g.fillRect(0, 0, 420, 170);
+            g.fillStyle = champ ? "#241542" : legend ? "#22092c" : "#dff0c4"; g.fillRect(0, 170, 420, 170);
+            if (champ) {
+                g.fillStyle = "rgba(212,175,55,0.5)";
+                for (let i = 0; i < 6; i++) g.fillRect(20 + i * 70, 0, 8, 170); // 황금 기둥
+            }
+            if (legend) {
+                // 페어리 빛기둥 + 반짝임
+                g.fillStyle = "rgba(245,123,196,0.35)";
+                for (let i = 0; i < 6; i++) g.fillRect(24 + i * 70, 0, 6, 170);
+                g.fillStyle = "rgba(255,255,255,0.7)";
+                const spx = [40, 120, 200, 300, 380, 90, 260, 350], spy = [30, 70, 40, 90, 50, 120, 30, 110];
+                for (let i = 0; i < spx.length; i++) g.fillRect(spx[i], spy[i], 3, 3);
+            }
+
+            const enemy = B.enemy();
+            const mine = G.party[B.pIdx];
+
+            // 적 발판 + 스프라이트 (오른쪽 위)
+            g.fillStyle = "rgba(120,90,60,0.25)";
+            g.beginPath(); g.ellipse(315, 150, 62, 16, 0, 0, Math.PI*2); g.fill();
+            drawMon(enemy.key, 315, 150, 7);
+            drawTypeChip(315, 162, SPECIES[enemy.key].type);
+
+            // 내 몬스터 (왼쪽 아래)
+            g.fillStyle = "rgba(120,90,60,0.25)";
+            g.beginPath(); g.ellipse(110, 288, 66, 17, 0, 0, Math.PI*2); g.fill();
+            drawMon(mine.key, 110, 288, 8);
+            drawTypeChip(110, 302, SPECIES[mine.key].type);
+
+            // HP 박스
+            drawHpBox(30, 24, enemy, false);
+            drawHpBox(228, 192, mine, true);
+        }
+
+        function drawHpBox(x, y, m, showExp) {
+            const w = 162, h = showExp ? 56 : 46;
+            g.fillStyle = "#fffdf6";
+            roundRect(x, y, w, h, 8); g.fill();
+            g.strokeStyle = "#7a6a4a"; g.lineWidth = 2;
+            roundRect(x, y, w, h, 8); g.stroke();
+
+            g.fillStyle = "#3a352d";
+            g.font = "bold 13px system-ui, sans-serif";
+            g.textAlign = "left";
+            g.fillText(SPECIES[m.key].name, x + 10, y + 18);
+            g.font = "11px system-ui, sans-serif";
+            g.fillStyle = "#8a8172";
+            g.fillText("Lv." + m.level, x + w - 34, y + 18);
+
+            // 상태이상 배지
+            if (m.st) {
+                const col = { burn:"#ff5a2a", poison:"#a35bd6", paralyze:"#e0b400", freeze:"#4bc4ff" }[m.st];
+                g.fillStyle = col; roundRect(x + w - 76, y + 6, 36, 14, 4); g.fill();
+                g.fillStyle = "#ffffff"; g.font = "bold 9px system-ui, sans-serif"; g.textAlign = "center";
+                g.fillText(STATUS_KR[m.st], x + w - 58, y + 16); g.textAlign = "left";
+            }
+
+            // HP 바
+            const bx = x + 10, by = y + 26, bw = w - 20, bh = 8;
+            g.fillStyle = "#3a2a18"; g.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+            g.fillStyle = "#c9c2b4"; g.fillRect(bx, by, bw, bh);
+            const ratio = Math.max(0, m.hp / maxHpOf(m));
+            g.fillStyle = ratio > 0.5 ? "#3fbf5f" : ratio > 0.2 ? "#f0b429" : "#ef4444";
+            g.fillRect(bx, by, Math.floor(bw * ratio), bh);
+
+            if (showExp) {
+                g.fillStyle = "#6f6656"; g.font = "10px system-ui, sans-serif";
+                g.fillText("HP " + Math.max(0, m.hp) + "/" + maxHpOf(m), bx, y + 50);
+                // EXP 바
+                const ex = bx, ey = y + 46, ew = bw, eh = 4;
+                g.fillStyle = "#d8d0c0"; g.fillRect(ex, ey, ew, eh);
+                g.fillStyle = "#3aa8ff";
+                g.fillRect(ex, ey, Math.floor(ew * (m.exp / expNeed(m.level))), eh);
+            }
+        }
+
+        function roundRect(x, y, w, h, r) {
+            g.beginPath();
+            g.moveTo(x + r, y);
+            g.arcTo(x + w, y, x + w, y + h, r);
+            g.arcTo(x + w, y + h, x, y + h, r);
+            g.arcTo(x, y + h, x, y, r);
+            g.arcTo(x, y, x + w, y, r);
+            g.closePath();
+        }
+
+        // 배틀에서 (cx,cy) 중심에 타입 칩을 그린다
+        function drawTypeChip(cx, cy, type) {
+            const label = TYPE_KR[type];
+            g.font = "bold 11px system-ui, sans-serif";
+            const w = g.measureText(label).width + 16, h = 18;
+            const x = cx - w / 2, y = cy - h / 2;
+            g.fillStyle = "rgba(0,0,0,0.22)"; roundRect(x + 1, y + 2, w, h, 9); g.fill();
+            g.fillStyle = TYPE_COLOR[type]; roundRect(x, y, w, h, 9); g.fill();
+            g.strokeStyle = "rgba(255,255,255,0.8)"; g.lineWidth = 1.5; roundRect(x, y, w, h, 9); g.stroke();
+            g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
+            g.fillText(label, cx, y + h / 2 + 1);
+            g.textAlign = "left"; g.textBaseline = "alphabetic";
+        }
+
+        /* =======================================================
+           UI 헬퍼
+           ======================================================= */
+        let scene = "start";
+        function setMsg(t) { msgEl.textContent = t; }
+        function setButtons(list) {
+            btnsEl.innerHTML = "";
+            list.forEach(function (b) {
+                const el = document.createElement("button");
+                el.textContent = b.label;
+                if (b.cls) el.className = b.cls;
+                if (b.disabled) el.disabled = true;
+                el.addEventListener("click", b.on);
+                btnsEl.appendChild(el);
+            });
+            btnsEl.classList.remove("hidden");
+        }
+        function showField(on) {
+            hintEl.classList.toggle("hidden", !on);
+            dpadEl.classList.toggle("hidden", !on);
+        }
+
+        /* =======================================================
+           시작 / 스타터 선택
+           ======================================================= */
+        function startScreen() {
+            scene = "start";
+            drawStartArt();
+            setMsg("함께 모험할 스타터를 골라라!");
+            showField(false);
+            dexPanel.style.display = "none"; boxPanel.style.display = "none";
+            setButtons([
+                { label: "🔥 엠버 (불)",  on: function () { pickStarter("ember"); } },
+                { label: "🌿 스프릿 (풀)", on: function () { pickStarter("sprout"); } },
+                { label: "💧 드롭 (물)",  on: function () { pickStarter("drop"); }, cls: "alt" }
+            ]);
+        }
+        function drawStartArt() {
+            g.clearRect(0, 0, 420, 340);
+            g.fillStyle = "#eef6ff"; g.fillRect(0, 0, 420, 340);
+            drawSprite(SPECIES.ember.shape,  PAL[SPECIES.ember.pal],  40,  120, 7);
+            drawSprite(SPECIES.sprout.shape, PAL[SPECIES.sprout.pal], 165, 120, 7);
+            drawSprite(SPECIES.drop.shape,   PAL[SPECIES.drop.pal],   290, 120, 7);
+            g.fillStyle = "#3a352d"; g.font = "bold 20px system-ui, sans-serif"; g.textAlign = "center";
+            g.fillText("스타터를 선택하세요", 210, 60);
+        }
+        function pickStarter(key) {
+            G = freshState();
+            G.started = true;
+            G.party = [ makeMon(key, 5) ];
+            addToDex(key);
+            updateBar(); save();
+            setMsg(SPECIES[key].name + "와(과) 함께 모험을 시작한다!");
+            toOverworld();
+        }
+
+        /* =======================================================
+           필드 진행
+           ======================================================= */
+        function toOverworld() {
+            scene = "overworld";
+            drawOverworld();
+            showField(true);
+            dexPanel.style.display = "none"; boxPanel.style.display = "none";
+            btnsEl.classList.add("hidden");
+            if (G.map === "castle") {
+                setMsg("성 안. 위로 올라가 사천왕에게 도전하라! (💛=회복, 아래 계단=나가기)");
+            } else if (G.map === "cave") {
+                setMsg(G.legendCaught ? "고요한 동굴. 전설은 이미 당신의 것이다. (아래 빛=나가기)"
+                                      : "✦ 깊은 동굴… 안쪽에서 강대한 페어리의 기운이 느껴진다! (아래 빛=나가기)");
+            } else {
+                setMsg(G.champ ? "당신은 챔피언! 남서쪽 바위산 동굴(✦)엔 전설이 잠들어 있다…"
+                               : "성문(D)으로 도전하라! 바위산 동굴(✦)엔 무시무시한 전설이 잠들어 있다… (풀숲=야생)");
+            }
+        }
+
+        function healEverything() {
+            G.party.forEach(function (m) { m.hp = maxHpOf(m); resetStatus(m); });
+            (G.box || []).forEach(function (m) { m.hp = maxHpOf(m); resetStatus(m); });
+            save();
+        }
+        function healParty() {
+            healEverything();
+            setMsg("💛 회복의 샘! 파티와 박스가 모두 회복됐다.");
+        }
+        function enterCastle() {
+            G.map = "castle"; G.px = 3; G.py = 12; save();
+            toOverworld();
+        }
+        function confirmChallenge() {
+            scene = "prompt";
+            setMsg("📋 접수처: 사천왕에 도전하시겠습니까? 시작하면 챔피언까지 한 번에 도전하며, 도중에 나갈 수 없습니다!");
+            setButtons([
+                { label: "예, 도전한다!", on: beginRun },
+                { label: "아니오",       on: cancelRun, cls: "warn" }
+            ]);
+        }
+        function beginRun() {
+            G.run = true;
+            G.eliteBeaten = [false, false, false, false]; // 도전은 항상 처음부터
+            save();
+            btnsEl.classList.add("hidden");
+            G.px = 3; G.py = 10; // 접수처 통과
+            scene = "overworld"; drawOverworld();
+            setMsg("⚔️ 도전 시작! 사천왕 4명을 차례로 쓰러뜨리고 챔피언에게 도전하라! (회복샘은 챔피언 직전에만)");
+        }
+        function cancelRun() {
+            btnsEl.classList.add("hidden");
+            scene = "overworld"; drawOverworld();
+            setMsg("접수처: 준비되면 다시 오세요.");
+        }
+        function approachChampion() {
+            scene = "prompt";
+            setMsg("👑 챔피언 제나: \"사천왕을 모두 넘다니 훌륭하다. 허나 왕좌는 그리 만만치 않아. 전력으로 상대하마!\"");
+            setButtons([{ label: "⚔️ 최후의 결전!", on: function () { btnsEl.classList.add("hidden"); startChampion(); } }]);
+        }
+        function exitCastle() {
+            G.map = "town"; G.px = 8; G.py = 3; save();
+            toOverworld();
+        }
+        function enterCave() {
+            G.map = "cave"; G.px = 5; G.py = 8; save();
+            toOverworld();
+        }
+        function exitCave() {
+            G.map = "town"; G.px = 8; G.py = 13; save();
+            toOverworld();
+        }
+
+        function tryMove(dx, dy) {
+            if (scene !== "overworld") return;
+            const nx = G.px + dx, ny = G.py + dy;
+            const ch = tileAt(nx, ny);
+
+            if (G.map === "castle") {
+                if (ch === "X") {
+                    if (G.run) { setMsg("도전 중에는 물러설 수 없다!"); return; }
+                    exitCastle(); return;
+                }
+                if (ch === "N") {
+                    if (G.run) { G.px = nx; G.py = ny; drawOverworld(); return; } // 도전 중 → 통과
+                    confirmChallenge(); return;
+                }
+                const ei = "1234".indexOf(ch);
+                if (ei >= 0) {
+                    if (G.eliteBeaten[ei]) { G.px = nx; G.py = ny; drawOverworld(); save(); return; }
+                    startElite(ei); return;
+                }
+                if (ch === "K") {
+                    if (G.champ) { G.px = nx; G.py = ny; drawOverworld(); setMsg("당신은 이미 챔피언!"); return; }
+                    if (G.eliteBeaten.indexOf(false) >= 0) { setMsg("먼저 사천왕 4명을 모두 이겨야 한다!"); return; }
+                    approachChampion(); return;
+                }
+                if (blocked(ch)) return;
+                G.px = nx; G.py = ny; drawOverworld(); save();
+                if (ch === "H") healParty();
+                return;
+            }
+
+            if (G.map === "cave") {
+                if (ch === "X") { exitCave(); return; }
+                if (ch === "L") {
+                    if (G.legendCaught) { G.px = nx; G.py = ny; drawOverworld(); save(); return; }
+                    startLegend(); return;
+                }
+                if (blocked(ch)) return;
+                G.px = nx; G.py = ny; drawOverworld(); save();
+                return;
+            }
+
+            // 마을
+            if (ch === "D") { enterCastle(); return; }
+            if (ch === "O") { enterCave(); return; }
+            if (blocked(ch)) return;
+            G.px = nx; G.py = ny; drawOverworld(); save();
+            if (ch === "H") { healParty(); return; }
+            if (ch === "~" && Math.random() < 0.24) { startWild(); }
+        }
+
+        /* =======================================================
+           배틀
+           ======================================================= */
+        let B = null;
+        function activeIdx() {
+            for (let i = 0; i < G.party.length; i++) if (G.party[i].hp > 0) return i;
+            return -1;
+        }
+
+        function startWild() {
+            // 1단계(약함) / 2단계(강함) 풀 — 7타입 전부 등장
+            const basePool = ["ember", "drop", "sprout", "spark", "frost", "pebble", "drake", "birdy", "moly", "wisp", "nutz"];
+            const midPool  = ["blaze", "tide", "vine", "volt", "glacia", "boulder", "wyvern", "falcon", "digdon", "phantom", "gearo"];
+            const useMid = Math.random() < 0.35;
+            const arr = useMid ? midPool : basePool;
+            const key = arr[Math.floor(Math.random() * arr.length)];
+            const level = useMid ? (7 + Math.floor(Math.random() * 4)) : (2 + Math.floor(Math.random() * 4));
+            beginBattle("wild", [ makeMon(key, level) ]);
+        }
+        function startElite(idx) {
+            const e = ELITE[idx];
+            const base = 13 + idx; // 사천왕: 약 13~18 (뒤로 갈수록 강함)
+            const team = e.team.map(function (k, i) { return makeMon(k, base + i); });
+            beginBattle("elite", team, idx);
+        }
+        function startChampion() {
+            // 챔피언 제나: 타입이 다양한 최종 진화형 6마리, Lv20~22 고정 (위엄!)
+            const roster = ["dragonia", "leviath", "drakon", "steelon", "reaper", "icerus"];
+            const team = roster.map(function (k, i) { return makeMon(k, 20 + (i % 3)); });
+            beginBattle("champion", team);
+        }
+        function startLegend() {
+            // 전설 제피로스: Lv45 단독. 초고 HP·공격 — 쓰러뜨리면 자동으로 박스행
+            beginBattle("legend", [ makeMon("zephyros", 45) ]);
+        }
+
+        function beginBattle(type, team, eliteIdx) {
+            scene = "battle";
+            showField(false);
+            dexPanel.style.display = "none"; boxPanel.style.display = "none";
+            B = { type: type, team: team, eIdx: 0, pIdx: activeIdx(), busy: false, eliteIdx: (eliteIdx === undefined ? -1 : eliteIdx) };
+            B.enemy = function () { return this.team[this.eIdx]; };
+            G.party.forEach(resetStatus); team.forEach(resetStatus); // 상태이상 초기화
+            drawBattle();
+            let who;
+            if (type === "elite")        who = "사천왕 " + ELITE[B.eliteIdx].name + "이(가) 승부를 걸어왔다!";
+            else if (type === "champion") who = "챔피언 제나가 최후의 승부를 건다!";
+            else if (type === "legend")   who = "✦ 전설의 " + SPECIES[B.enemy().key].name + "이(가) 눈을 떴다! 압도적인 기운이 몰아친다!";
+            else                          who = "앗! 야생 " + SPECIES[B.enemy().key].name + "이(가) 나타났다!";
+            setMsg(who);
+            setTimeout(chooseLead, 800);
+        }
+        function foeName() { return B.type === "elite" ? ELITE[B.eliteIdx].name : B.type === "champion" ? "챔피언 제나" : "상대"; }
+
+        // 배틀 시작 시 먼저 내보낼 몬스터 선택 (살아있는 게 2마리 이상일 때)
+        function chooseLead() {
+            const alive = [];
+            G.party.forEach(function (m, i) { if (m.hp > 0) alive.push(i); });
+            if (alive.length <= 1) { if (alive.length === 1) B.pIdx = alive[0]; drawBattle(); mainMenu(); return; }
+            setMsg("누구를 먼저 내보낼까?");
+            setButtons(alive.map(function (i) {
+                return {
+                    label: SPECIES[G.party[i].key].name + " Lv." + G.party[i].level +
+                           " (HP " + Math.max(0, G.party[i].hp) + "/" + maxHpOf(G.party[i]) + ")",
+                    on: function () { leadOut(i); }
+                };
+            }));
+        }
+        function leadOut(i) {
+            B.pIdx = i;
+            btnsEl.classList.add("hidden");
+            drawBattle();
+            setMsg("가라, " + SPECIES[G.party[i].key].name + "!");
+            setTimeout(mainMenu, 800);
+        }
+
+        function mainMenu() {
+            if (B.busy) return;
+            drawBattle();
+            setMsg("무엇을 할까?");
+            const canCatch = B.type === "wild";
+            setButtons([
+                { label: "⚔️ 싸우기", on: moveMenu },
+                { label: "🎯 잡기",  on: doCatch,  cls: "alt",  disabled: !canCatch },
+                { label: "🔄 교체",  on: switchMenu, cls: "warn" },
+                { label: "🏃 도망",  on: doRun,    disabled: (B.type === "elite" || B.type === "champion") }
+            ]);
+        }
+
+        function moveMenu() {
+            const mine = G.party[B.pIdx];
+            const mv = movesOf(mine);
+            const list = mv.map(function (m, i) {
+                return { label: m.n + " (" + TYPE_KR[m.t] + ")", on: function () { playerAttack(i); } };
+            });
+            list.push({ label: "← 뒤로", on: mainMenu, cls: "warn" });
+            setButtons(list);
+            setMsg("기술을 선택하세요.");
+        }
+
+        function switchMenu() {
+            const list = [];
+            G.party.forEach(function (m, i) {
+                if (i === B.pIdx || m.hp <= 0) return;
+                list.push({ label: SPECIES[m.key].name + " Lv." + m.level, on: function () { doSwitch(i); } });
+            });
+            if (list.length === 0) { setMsg("교체할 수 있는 몬스터가 없다!"); setTimeout(mainMenu, 800); return; }
+            list.push({ label: "← 뒤로", on: mainMenu, cls: "warn" });
+            setButtons(list);
+            setMsg("누구로 교체할까?");
+        }
+        function doSwitch(i) {
+            B.pIdx = i;
+            B.busy = true; btnsEl.classList.add("hidden");
+            setMsg("가라, " + SPECIES[G.party[i].key].name + "!");
+            drawBattle();
+            setTimeout(enemyTurn, 800);
+        }
+
+        function calcDmg(attacker, defender, mv) {
+            const mult = typeMult(mv.t, SPECIES[defender.key].type);
+            let atk = atkOf(attacker) * (attacker.atkMod || 1);
+            if (attacker.st === "burn" && mv.t !== "normal") atk *= 0.75; // 화상: 공격 약화
+            const base = atk * mv.p / 45;
+            const dmg = mult === 0 ? 0 : Math.max(1, Math.floor(base * mult * (0.85 + Math.random() * 0.15)));
+            return { dmg: dmg, mult: mult };
+        }
+        function effTxt(m) { return m === 0 ? " 효과가 없는 것 같다..." : m > 1 ? " 효과가 굉장했다!" : m < 1 ? " 효과가 별로였다..." : ""; }
+
+        // 행동 봉쇄 판정(마비·동상·위축). 봉쇄 시 메시지 반환, 아니면 null
+        function actionBlock(m) {
+            if (m.flinch) { m.flinch = false; return "위축되어 움직이지 못했다!"; }
+            if (m.st === "paralyze" && Math.random() < 0.3) return "몸이 마비돼 움직일 수 없다! ⚡";
+            if (m.st === "freeze" && Math.random() < 0.3) return "얼어붙어 움직일 수 없다! ❄️";
+            return null;
+        }
+        // 기술 부가효과 적용. 걸리면 안내 메시지, 아니면 "" 반환
+        function applyEffect(mv, target) {
+            const e = mv.eff;
+            if (!e || Math.random() >= Math.min(0.9, e.chance + 0.15)) return "";
+            if (e.kind === "st") {
+                if (target.st) return "";
+                target.st = e.st;
+                return SPECIES[target.key].name + "은(는) " + STATUS_KR[e.st] + " 상태가 됐다!";
+            }
+            if (e.kind === "weaken") {
+                target.atkMod = Math.max(0.5, (target.atkMod || 1) * 0.75);
+                return SPECIES[target.key].name + "의 공격이 떨어졌다! 🔻";
+            }
+            if (e.kind === "flinch") { target.flinch = true; return ""; }
+            return "";
+        }
+        // 턴 종료 시 화상·독 도트 데미지. 준 데미지 반환(없으면 0)
+        function dotTick(m) {
+            if (m.st === "burn" || m.st === "poison") {
+                const d = Math.max(1, Math.floor(maxHpOf(m) * (m.st === "burn" ? 0.08 : 0.1)));
+                m.hp -= d; return d;
+            }
+            return 0;
+        }
+
+        function playerAttack(mi) {
+            if (B.busy) return;
+            B.busy = true; btnsEl.classList.add("hidden");
+            const mine = G.party[B.pIdx];
+            const enemy = B.enemy();
+            const mv = movesOf(mine)[mi];
+            const blk = actionBlock(mine);
+            if (blk) {
+                setMsg(SPECIES[mine.key].name + "! 하지만 " + blk);
+                setTimeout(afterPlayerAction, 950);
+                return;
+            }
+            const r = calcDmg(mine, enemy, mv);
+            enemy.hp -= r.dmg;
+            setMsg(SPECIES[mine.key].name + "의 " + mv.n + "!");
+            setTimeout(function () {
+                drawBattle();
+                let extra = effTxt(r.mult);
+                setMsg(SPECIES[enemy.key].name + "에게 " + r.dmg + " 데미지!" + extra);
+                setTimeout(function () {
+                    if (enemy.hp <= 0) { enemyFaint(); return; }
+                    const em = applyEffect(mv, enemy);
+                    if (em) { drawBattle(); setMsg(em); setTimeout(afterPlayerAction, 950); }
+                    else afterPlayerAction();
+                }, 800);
+            }, 500);
+        }
+        function afterPlayerAction() {
+            const mine = G.party[B.pIdx];
+            const d = dotTick(mine);
+            if (d > 0) {
+                drawBattle();
+                setMsg(SPECIES[mine.key].name + "은(는) " + STATUS_KR[mine.st] + "(으)로 " + d + " 데미지!");
+                setTimeout(function () {
+                    if (mine.hp <= 0) { myFaint(); return; }
+                    enemyTurn();
+                }, 950);
+            } else enemyTurn();
+        }
+
+        function enemyTurn() {
+            const mine = G.party[B.pIdx];
+            const enemy = B.enemy();
+            if (enemy.hp <= 0) { enemyFaint(); return; }
+            const mvs = movesOf(enemy);
+            const mv = mvs[Math.floor(Math.random() * mvs.length)];
+            const blk = actionBlock(enemy);
+            if (blk) {
+                setMsg("상대 " + SPECIES[enemy.key].name + "! 하지만 " + blk);
+                setTimeout(afterEnemyAction, 950);
+                return;
+            }
+            const r = calcDmg(enemy, mine, mv);
+            mine.hp -= r.dmg;
+            setMsg("상대 " + SPECIES[enemy.key].name + "의 " + mv.n + "!");
+            setTimeout(function () {
+                drawBattle();
+                let extra = effTxt(r.mult);
+                setMsg(SPECIES[mine.key].name + "이(가) " + r.dmg + " 데미지를 받았다!" + extra);
+                setTimeout(function () {
+                    if (mine.hp <= 0) { myFaint(); return; }
+                    const em = applyEffect(mv, mine);
+                    if (em) { drawBattle(); setMsg(em); setTimeout(afterEnemyAction, 950); }
+                    else afterEnemyAction();
+                }, 800);
+            }, 500);
+        }
+        function afterEnemyAction() {
+            const enemy = B.enemy();
+            const d = dotTick(enemy);
+            if (d > 0) {
+                drawBattle();
+                setMsg("상대 " + SPECIES[enemy.key].name + "은(는) " + STATUS_KR[enemy.st] + "(으)로 " + d + " 데미지!");
+                setTimeout(function () {
+                    if (enemy.hp <= 0) { enemyFaint(); return; }
+                    B.busy = false; mainMenu();
+                }, 950);
+            } else { B.busy = false; mainMenu(); }
+        }
+
+        function enemyFaint() {
+            const enemy = B.enemy();
+            setMsg("상대 " + SPECIES[enemy.key].name + "을(를) 쓰러뜨렸다!");
+            drawBattle();
+            // 트레이너(사천왕·챔피언)는 다음 몬스터를 내보냄
+            if ((B.type === "champion" || B.type === "elite") && B.eIdx < B.team.length - 1) {
+                setTimeout(function () {
+                    B.eIdx++;
+                    drawBattle();
+                    setMsg(foeName() + "이(가) " + SPECIES[B.enemy().key].name + "을(를) 내보냈다!");
+                    setTimeout(function () { B.busy = false; mainMenu(); }, 900);
+                }, 900);
+                return;
+            }
+            // 전설: 쓰러뜨리면 경험치 후 자동으로 박스에 합류
+            if (B.type === "legend") {
+                const lgain = enemy.level * 8;
+                setTimeout(function () { gainExp(B.pIdx, lgain, function () {
+                    G.box.push(makeMon(enemy.key, enemy.level));
+                    addToDex(enemy.key);
+                    G.legendCaught = true;
+                    updateBar(); save();
+                    setMsg("👑 전설의 " + SPECIES[enemy.key].name + "이(가) 당신의 힘을 인정했다! 📦 박스에 합류한다!");
+                    setTimeout(function () { endToField("전설의 몬스터를 손에 넣었다! 박스에서 파티에 편성하세요."); }, 1800);
+                }); }, 900);
+                return;
+            }
+            // 경험치 — 참전 몬스터는 전액, 안 나온 동료도 소량(40%) 분배
+            const gain = enemy.level * 7;
+            const share = Math.max(1, Math.floor(gain * 0.4));
+            let shared = 0;
+            G.party.forEach(function (m, i) {
+                if (i !== B.pIdx && m.hp > 0) { applyExpSilently(m, share); shared++; }
+            });
+            const bonus = shared > 0 ? " (동료 " + shared + "마리도 +" + share + " EXP)" : "";
+            setTimeout(function () { gainExp(B.pIdx, gain, function () {
+                if (B.type === "champion") { winGame(); }
+                else if (B.type === "elite") {
+                    G.eliteBeaten[B.eliteIdx] = true; save();
+                    endToField("사천왕 " + ELITE[B.eliteIdx].name + "을(를) 꺾었다!" + bonus);
+                }
+                else { endToField("승리! 경험치 " + gain + " 획득." + bonus); }
+            }); }, 900);
+        }
+
+        // 벤치(안 나온) 몬스터에 조용히 경험치 적용 — 레벨업·진화 처리(연출 없음)
+        function applyExpSilently(m, amount) {
+            m.exp += amount;
+            while (m.exp >= expNeed(m.level)) {
+                m.exp -= expNeed(m.level);
+                const oldMax = maxHpOf(m);
+                m.level++;
+                m.hp += maxHpOf(m) - oldMax;
+                const evo = SPECIES[m.key].evo;
+                if (evo && m.level >= SPECIES[m.key].evoLv) { const preMax = maxHpOf(m); m.key = evo; m.hp += maxHpOf(m) - preMax; addToDex(evo); }
+            }
+        }
+
+        function gainExp(idx, amount, done) {
+            const m = G.party[idx];
+            m.exp += amount;
+            let leveled = false, evolvedTo = null;
+            while (m.exp >= expNeed(m.level)) {
+                m.exp -= expNeed(m.level);
+                const oldMax = maxHpOf(m);
+                m.level++;
+                m.hp += maxHpOf(m) - oldMax; // 레벨업으로 늘어난 만큼 현재 HP도 상승
+                leveled = true;
+                const evo = SPECIES[m.key].evo;
+                if (evo && m.level >= SPECIES[m.key].evoLv) {
+                    const preMax = maxHpOf(m); m.key = evo; m.hp += maxHpOf(m) - preMax; // 진화로 늘어난 만큼 회복
+                    evolvedTo = SPECIES[evo].name; addToDex(evo);
+                }
+            }
+            drawBattle(); updateBar(); save();
+            if (evolvedTo) { setMsg("축하합니다! " + evolvedTo + "(으)로 진화했다! ✨"); setTimeout(done, 1400); }
+            else if (leveled) { setMsg(SPECIES[m.key].name + "이(가) Lv." + m.level + "로 올랐다!"); setTimeout(done, 1100); }
+            else { done(); }
+        }
+
+        function myFaint() {
+            setMsg(SPECIES[G.party[B.pIdx].key].name + "이(가) 쓰러졌다!");
+            drawBattle();
+            setTimeout(function () {
+                const alive = [];
+                G.party.forEach(function (m, i) { if (m.hp > 0) alive.push(i); });
+                if (alive.length === 0) { blackout(); return; }
+                if (alive.length === 1) { faintSwitch(alive[0]); return; }
+                // 남은 몬스터가 여럿이면 직접 선택
+                setMsg("다음은 누구를 내보낼까?");
+                setButtons(alive.map(function (i) {
+                    return {
+                        label: SPECIES[G.party[i].key].name + " Lv." + G.party[i].level +
+                               " (HP " + Math.max(0, G.party[i].hp) + "/" + maxHpOf(G.party[i]) + ")",
+                        on: function () { faintSwitch(i); }
+                    };
+                }));
+            }, 900);
+        }
+        function faintSwitch(i) {
+            B.pIdx = i;
+            btnsEl.classList.add("hidden");
+            drawBattle();
+            setMsg("가라, " + SPECIES[G.party[i].key].name + "!");
+            setTimeout(function () { B.busy = false; mainMenu(); }, 900);
+        }
+
+        function blackout() {
+            setMsg("눈앞이 캄캄해졌다... 마을로 돌아왔다.");
+            G.party.forEach(function (m) { m.hp = maxHpOf(m); resetStatus(m); });
+            G.map = "town"; G.px = 7; G.py = 13; G.run = false; save();
+            setTimeout(function () { toOverworld(); }, 1400);
+        }
+
+        function doCatch() {
+            if (B.busy) return;
+            B.busy = true; btnsEl.classList.add("hidden");
+            const enemy = B.enemy();
+            setMsg("몬스터볼을 던졌다!");
+            const ratio = enemy.hp / maxHpOf(enemy);
+            const chance = Math.min(0.9, 0.35 + (1 - ratio) * 0.55);
+            setTimeout(function () {
+                if (Math.random() < chance) {
+                    const caught = makeMon(enemy.key, enemy.level);
+                    addToDex(enemy.key);
+                    let where;
+                    if (G.party.length < 6) { G.party.push(caught); where = "파티에 합류했다."; }
+                    else { G.box.push(caught); where = "박스로 보내졌다. (박스에서 파티 편성 가능)"; }
+                    updateBar(); save();
+                    setMsg(SPECIES[enemy.key].name + "을(를) 잡았다! 🎉");
+                    setTimeout(function () { endToField(SPECIES[enemy.key].name + "이(가) " + where); }, 1200);
+                } else {
+                    setMsg("아깝다! 몬스터가 볼에서 튀어나왔다!");
+                    setTimeout(enemyTurn, 1000);
+                }
+            }, 900);
+        }
+
+        function doRun() {
+            if (B.busy) return;
+            B.busy = true; btnsEl.classList.add("hidden");
+            setMsg("도망쳤다!");
+            setTimeout(function () { endToField(""); }, 800);
+        }
+
+        function endToField(extra) {
+            B = null;
+            // 필드로 돌아가되 파티 첫 생존자 유지, HP는 유지
+            toOverworld();
+            if (extra) setMsg(extra);
+        }
+
+        function winGame() {
+            scene = "win";
+            G.champ = true; G.run = false; save();
+            g.clearRect(0, 0, 420, 340);
+            const grd = g.createLinearGradient(0, 0, 0, 340);
+            grd.addColorStop(0, "#fff4c2"); grd.addColorStop(1, "#ffd76b");
+            g.fillStyle = grd; g.fillRect(0, 0, 420, 340);
+            g.fillStyle = "#7a5a10"; g.font = "bold 30px system-ui, sans-serif"; g.textAlign = "center";
+            g.fillText("🏆 새로운 챔피언!", 210, 150);
+            g.font = "16px system-ui, sans-serif";
+            g.fillText("당신은 왕국의 챔피언이 되었다!", 210, 190);
+            drawSprite(HERO, PAL.hero, 185, 210, 4);
+            setMsg("축하합니다! 챔피언 등극! 🎉");
+            showField(false);
+            setButtons([{ label: "필드로 돌아가기", on: toOverworld }]);
+        }
+
+        /* =======================================================
+           도감 패널
+           ======================================================= */
+        function toggleDex() {
+            if (dexPanel.style.display === "block") { dexPanel.style.display = "none"; return; }
+            boxPanel.style.display = "none";
+            let html = "<h3>📖 도감 (" + G.dex.length + "/34) · 파티 " + G.party.length + "/6</h3>";
+            html += "<div style='font-weight:700;margin:6px 0 2px;color:#0f7f60'>내 파티</div>";
+            if (!G.party.length) html += "<div class='muted'>아직 없음</div>";
+            G.party.forEach(function (m) {
+                html += "<div class='row'>" + SPECIES[m.key].name + " <span class='muted'>(" + TYPE_KR[SPECIES[m.key].type] + ")</span> · Lv." + m.level + " · HP " + Math.max(0,m.hp) + "/" + maxHpOf(m) + "</div>";
+            });
+            html += "<div style='font-weight:700;margin:10px 0 2px;color:#0f7f60'>발견한 몬스터</div>";
+            Object.keys(SPECIES).forEach(function (k) {
+                const seen = G.dex.indexOf(k) !== -1;
+                html += "<div class='row'>" + (seen ? "✔ " + SPECIES[k].name + " <span class='muted'>(" + TYPE_KR[SPECIES[k].type] + ")</span>" : "<span class='muted'>??? 미발견</span>") + "</div>";
+            });
+            dexPanel.innerHTML = html;
+            dexPanel.style.display = "block";
+        }
+
+        /* =======================================================
+           박스 (파티 편성)
+           ======================================================= */
+        function monLabel(m) {
+            return SPECIES[m.key].name + " <span class='muted'>(" + TYPE_KR[SPECIES[m.key].type] + ") Lv." + m.level +
+                   " · HP " + Math.max(0, m.hp) + "/" + maxHpOf(m) + "</span>";
+        }
+        function toggleBox() {
+            if (boxPanel.style.display === "block") { boxPanel.style.display = "none"; return; }
+            dexPanel.style.display = "none"; boxPanel.style.display = "none";
+            renderBox();
+            boxPanel.style.display = "block";
+        }
+        function renderBox() {
+            let html = "<h3>📦 박스 — 데려갈 6마리를 편성하세요</h3>";
+            html += "<div class='row'><span class='muted'>파티·박스 전체 HP/상태 회복</span>" +
+                    "<button class='heal' data-act='healall'>🩹 전부 회복</button></div>";
+            html += "<div class='sub'>내 파티 (" + G.party.length + "/6)</div>";
+            if (!G.party.length) html += "<div class='muted'>없음</div>";
+            G.party.forEach(function (m, i) {
+                html += "<div class='row'><span>" + monLabel(m) + "</span>" +
+                        "<button class='to-box' data-act='tobox' data-i='" + i + "'" +
+                        (G.party.length <= 1 ? " disabled" : "") + ">→ 박스</button></div>";
+            });
+            html += "<div class='sub'>박스 보관함 (" + G.box.length + "마리)</div>";
+            if (!G.box.length) html += "<div class='muted'>비어 있음 — 파티가 꽉 찬 상태로 잡으면 여기로 와요</div>";
+            G.box.forEach(function (m, j) {
+                html += "<div class='row'><span>" + monLabel(m) + "</span><span>" +
+                        "<button data-act='toparty' data-i='" + j + "'" +
+                        (G.party.length >= 6 ? " disabled" : "") + ">→ 파티</button> " +
+                        "<button class='release' data-act='release' data-i='" + j + "'>놓아주기</button></span></div>";
+            });
+            boxPanel.innerHTML = html;
+        }
+        boxPanel.addEventListener("click", function (e) {
+            const btn = e.target.closest("button[data-act]");
+            if (!btn) return;
+            if (scene !== "overworld" || G.run) {
+                setMsg(G.run ? "도전 중에는 편성을 바꿀 수 없다!" : "필드에서만 편성할 수 있다.");
+                return;
+            }
+            const act = btn.getAttribute("data-act");
+            const i = parseInt(btn.getAttribute("data-i"), 10);
+            if (act === "tobox") {
+                if (G.party.length <= 1) return;
+                G.box.push(G.party.splice(i, 1)[0]);
+            } else if (act === "toparty") {
+                if (G.party.length >= 6) return;
+                G.party.push(G.box.splice(i, 1)[0]);
+            } else if (act === "healall") {
+                healEverything();
+                setMsg("🩹 파티·박스 몬스터를 모두 회복했다!");
+                renderBox(); updateBar();
+                return;
+            } else if (act === "release") {
+                const m = G.box[i];
+                if (!window.confirm(SPECIES[m.key].name + " Lv." + m.level + "을(를) 정말 놓아줄까요?")) return;
+                G.box.splice(i, 1);
+                setMsg(SPECIES[m.key].name + "을(를) 놓아줬다. 잘 가!");
+            }
+            updateBar(); save(); renderBox();
+        });
+
+        /* =======================================================
+           입력
+           ======================================================= */
+        document.addEventListener("keydown", function (e) {
+            if (scene !== "overworld") return;
+            const k = e.key;
+            if (k === "ArrowUp" || k === "w" || k === "W") { tryMove(0, -1); e.preventDefault(); }
+            else if (k === "ArrowDown" || k === "s" || k === "S") { tryMove(0, 1); e.preventDefault(); }
+            else if (k === "ArrowLeft" || k === "a" || k === "A") { tryMove(-1, 0); e.preventDefault(); }
+            else if (k === "ArrowRight" || k === "d" || k === "D") { tryMove(1, 0); e.preventDefault(); }
+        });
+        dpadEl.addEventListener("click", function (e) {
+            const dir = e.target.getAttribute("data-dir");
+            if (!dir) return;
+            if (dir === "up") tryMove(0, -1);
+            else if (dir === "down") tryMove(0, 1);
+            else if (dir === "left") tryMove(-1, 0);
+            else if (dir === "right") tryMove(1, 0);
+        });
+
+        document.getElementById("btn-box").addEventListener("click", toggleBox);
+        document.getElementById("btn-dex").addEventListener("click", toggleDex);
+        document.getElementById("btn-reset").addEventListener("click", function () {
+            if (!confirm("정말 새 게임을 시작할까요? 지금 진행상황은 사라져요.")) return;
+            localStorage.removeItem("mquest");
+            G = freshState();
+            updateBar();
+            startScreen();
+        });
+
+        /* =======================================================
+           부팅
+           ======================================================= */
+        const saved = load();
+        if (saved && saved.started) {
+            G = saved;
+            // 구버전 세이브 호환
+            if (!G.map) { G.map = "town"; G.px = 7; G.py = 13; }
+            if (!G.eliteBeaten) G.eliteBeaten = [false, false, false, false];
+            if (G.run === undefined) G.run = false;
+            if (!G.box) G.box = [];
+            if (G.legendCaught === undefined) G.legendCaught = false;
+            // 구버전(15×13 맵) 세이브는 새 맵 좌표로 안전하게 이동
+            if (MAPS[G.map] && (G.py >= MAPS[G.map].rows || G.px >= MAPS[G.map].cols)) { G.map = "town"; G.px = 7; G.py = 13; }
+            if (G.map === "castle" && G.run) { G.map = "town"; G.px = 7; G.py = 13; G.run = false; } // 도전 중 세션 종료 시 복구
+            if (!G.party.some(function (m) { return m.hp > 0; })) G.party.forEach(function (m) { m.hp = maxHpOf(m); });
+            updateBar();
+            toOverworld();
+        } else {
+            G = freshState();
+            updateBar();
+            startScreen();
+        }
+    })();
+    </script>
+
+</body>
+
+</html>

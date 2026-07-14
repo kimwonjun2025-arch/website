@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Playground</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* ===== 놀이터 전용 스타일 ===== */
+        .pg-wrap {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 30px 20px 120px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .pg-title {
+            font-size: 54px;
+            letter-spacing: 6px;
+            margin: 10px 0 8px;
+            color: #3a352d;
+        }
+
+        .pg-lead {
+            color: #8a8172;
+            font-size: 17px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .pg-box {
+            background: #fbf7f0;
+            border: 1px solid rgba(60, 50, 35, 0.1);
+            box-shadow: 0 10px 30px rgba(120, 100, 70, 0.12);
+            border-radius: 24px;
+            padding: 30px 26px;
+            margin: 26px 0;
+            text-align: center;
+        }
+
+        .pg-box h2 {
+            font-size: 22px;
+            letter-spacing: 1px;
+            margin: 0 0 4px;
+            color: #3a352d;
+        }
+
+        .pg-box p {
+            color: #8a8172;
+            font-size: 14px;
+            margin: 0 0 18px;
+        }
+
+        /* 공용 버튼 */
+        .pg-btn {
+            padding: 13px 30px;
+            border: 0;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #0f9d76, #14b88a);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 20px rgba(15, 157, 118, 0.3);
+        }
+
+        .pg-btn:hover { transform: translateY(-2px); }
+        .pg-btn:active { transform: translateY(1px); }
+
+        /* HUD (점수/시간/기록) */
+        .hud {
+            display: flex;
+            justify-content: center;
+            gap: 26px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .hud .stat { text-align: center; }
+        .hud .stat .label {
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: #8a8172;
+            text-transform: uppercase;
+        }
+        .hud .stat .val {
+            font-size: 28px;
+            font-weight: 800;
+            color: #0f7f60;
+        }
+
+        /* 캔버스 공통 */
+        .pg-canvas {
+            width: 100%;
+            border-radius: 16px;
+            display: block;
+            touch-action: none;
+        }
+
+        #catch-canvas { cursor: none; }
+
+        #fw-canvas {
+            background: #10101a;
+            cursor: crosshair;
+        }
+
+        /* 반응속도 박스 */
+        #reaction-pad {
+            height: 200px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+            background: #64748b;
+            transition: background 0.05s;
+        }
+        #reaction-pad.wait { background: #ef4444; }
+        #reaction-pad.go   { background: #22c55e; }
+        #reaction-pad.early { background: #f59e0b; }
+        #reaction-pad.result { background: #6366f1; }
+
+        /* 코나미 */
+        .konami-hint {
+            font-family: monospace;
+            font-size: 18px;
+            letter-spacing: 4px;
+            color: #3a352d;
+            background: rgba(60, 50, 35, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            display: inline-block;
+        }
+        .konami-progress {
+            margin-top: 14px;
+            font-size: 22px;
+            letter-spacing: 6px;
+            min-height: 28px;
+            color: #0f7f60;
+        }
+
+        /* 치트 배너 (항상 화면 맨 위 고정 · 효과에 안 휩쓸림) */
+        #cheat-banner {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 100000; padding: 12px 16px;
+            display: none; align-items: center; justify-content: center; gap: 16px;
+            flex-wrap: wrap;
+            font-size: 18px; font-weight: 800; letter-spacing: 1px; color: #fff;
+            background: linear-gradient(90deg, #ff0080, #ff8c00, #ffe600, #00e676, #00b0ff, #d500f9);
+            background-size: 400% 100%;
+            animation: rainbow 3s linear infinite;
+        }
+        #cheat-banner.show { display: flex; }
+        #cheat-stop {
+            border: 0; border-radius: 20px; padding: 8px 16px; cursor: pointer;
+            background: rgba(0,0,0,0.55); color: #fff; font-weight: 700; font-size: 14px;
+            white-space: nowrap;
+        }
+        #cheat-stop:hover { background: rgba(0,0,0,0.78); }
+        @keyframes rainbow { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
+
+        /* 무대: 치트 효과가 걸리는 영역 (배너는 여기 밖이라 안 돌아감) */
+        #stage { min-height: 100vh; }
+
+        /* --- 랜덤 치트 효과들 --- */
+        #stage.cheat-spin   { animation: spin-world 6s linear infinite, hue 5s linear infinite; }
+        #stage.cheat-flip   { transform: rotate(180deg); }
+        #stage.cheat-invert { filter: invert(1) hue-rotate(180deg); }
+        #stage.cheat-quake  { animation: quake 0.4s linear infinite; }
+        #stage.cheat-float  { animation: floaty 2.4s ease-in-out infinite; }
+        #stage.cheat-disco  { animation: disco 0.5s steps(1) infinite; }
+
+        @keyframes spin-world { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes hue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+        @keyframes quake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-9px, 5px) rotate(-1deg); }
+            50% { transform: translate(9px, -7px) rotate(1deg); }
+            75% { transform: translate(-6px, -5px) rotate(-1deg); }
+        }
+        @keyframes floaty {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-24px) rotate(2deg); }
+        }
+        @keyframes disco {
+            0%   { background: #ff0080; }
+            20%  { background: #00e676; }
+            40%  { background: #00b0ff; }
+            60%  { background: #ffe600; }
+            80%  { background: #d500f9; }
+        }
+    </style>
+</head>
+
+<body class="page light">
+
+    <div id="cheat-banner">
+        <span id="cheat-text"></span>
+        <button id="cheat-stop">✖ 끄기 (ESC)</button>
+    </div>
+
+    <div id="stage">
+    <nav class="navbar">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="journey.html">Journey</a>
+        <a href="projects.html" class="active">Projects</a>
+    </nav>
+
+    <div class="pg-wrap">
+
+        <h1 class="pg-title">PLAYGROUND 🎡</h1>
+        <p class="pg-lead">
+            이력이랑 1도 상관없는 오락실이에요. 최고기록 깨보세요 😎
+        </p>
+
+        <!-- 1. 돈 받기 게임 -->
+        <div class="pg-box">
+            <h2>💰 돈 받기</h2>
+            <p>바구니(마우스로 조종)로 떨어지는 돈을 받으세요. 💣 폭탄은 피하기! · 30초</p>
+            <div class="hud">
+                <div class="stat"><div class="label">점수</div><div class="val" id="catch-score">0</div></div>
+                <div class="stat"><div class="label">남은 시간</div><div class="val" id="catch-time">30</div></div>
+                <div class="stat"><div class="label">최고점수</div><div class="val" id="catch-best">0</div></div>
+            </div>
+            <canvas id="catch-canvas" class="pg-canvas" height="380"></canvas>
+            <div style="margin-top:16px;">
+                <button class="pg-btn" id="catch-start">게임 시작 ▶</button>
+            </div>
+        </div>
+
+        <!-- 2. 반응속도 테스트 -->
+        <div class="pg-box">
+            <h2>⚡ 반응속도 테스트</h2>
+            <p>초록불로 바뀌는 순간 최대한 빨리 클릭! 빨간불에 누르면 부정출발이에요.</p>
+            <div id="reaction-pad">여기를 클릭해서 시작</div>
+            <div class="hud" style="margin-top:16px;">
+                <div class="stat"><div class="label">방금 기록</div><div class="val" id="react-last">-</div></div>
+                <div class="stat"><div class="label">최고기록</div><div class="val" id="react-best">-</div></div>
+            </div>
+        </div>
+
+        <!-- 3. 폭죽 놀이 -->
+        <div class="pg-box">
+            <h2>🎆 폭죽 놀이</h2>
+            <p>검은 화면 아무 데나 클릭(또는 꾹 눌러 움직이기)하면 폭죽이 터져요.</p>
+            <canvas id="fw-canvas" class="pg-canvas" height="320"></canvas>
+        </div>
+
+        <!-- 4. 숨겨진 치트키 -->
+        <div class="pg-box">
+            <h2>🎲 랜덤 효과 발동</h2>
+            <p>화면에 뜨는 순서대로 키를 누르면 <b>랜덤 효과</b>가 터져요. 순서도 효과도 <b>매번 바뀜!</b> (끄려면 ESC)</p>
+            <div class="konami-hint">↑ ↑ ↓ ↓ ← → ← → B A</div>
+            <div class="konami-progress" id="konami-progress"></div>
+        </div>
+
+    </div>
+
+    <div class="background"></div>
+    </div><!-- /stage -->
+
+
+    <script>
+        /* ============================================================
+           1. 돈 받기 게임
+           ============================================================ */
+        (function () {
+            const cv = document.getElementById("catch-canvas");
+            const ctx = cv.getContext("2d");
+            const scoreEl = document.getElementById("catch-score");
+            const timeEl = document.getElementById("catch-time");
+            const bestEl = document.getElementById("catch-best");
+            const startBtn = document.getElementById("catch-start");
+
+            const H = 380;
+            let W = 700;
+            function resize() { W = cv.width = cv.clientWidth || 700; cv.height = H; }
+
+            const KINDS = [
+                { e: "💵", p: 1, w: 0.34 },
+                { e: "💰", p: 3, w: 0.24 },
+                { e: "🤑", p: 5, w: 0.12 },
+                { e: "💎", p: 10, w: 0.06 },
+                { e: "💣", p: -8, w: 0.24 }
+            ];
+
+            let items = [], basket = { x: 350 }, score = 0, timeLeft = 30;
+            let running = false, raf = null, frame = 0, timerId = null;
+            let best = parseInt(localStorage.getItem("catch_best") || "0", 10);
+            bestEl.textContent = best;
+
+            function pickKind() {
+                let r = Math.random(), acc = 0;
+                for (const k of KINDS) { acc += k.w; if (r <= acc) return k; }
+                return KINDS[0];
+            }
+
+            function spawn() {
+                const k = pickKind();
+                items.push({
+                    x: 30 + Math.random() * (W - 60),
+                    y: -30,
+                    vy: 1.3 + Math.random() * 1.0 + (30 - timeLeft) * 0.06,
+                    k: k
+                });
+            }
+
+            function drawIdle(msg) {
+                ctx.clearRect(0, 0, W, H);
+                const g = ctx.createLinearGradient(0, 0, 0, H);
+                g.addColorStop(0, "#eaf6ff"); g.addColorStop(1, "#cfeaff");
+                ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = "#5a6b7a";
+                ctx.font = "20px system-ui, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(msg, W / 2, H / 2);
+            }
+
+            function loop() {
+                ctx.clearRect(0, 0, W, H);
+                const g = ctx.createLinearGradient(0, 0, 0, H);
+                g.addColorStop(0, "#eaf6ff"); g.addColorStop(1, "#cfeaff");
+                ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+                frame++;
+                const spawnEvery = Math.max(28, Math.round(48 - (30 - timeLeft) * 0.6));
+                if (frame % spawnEvery === 0) spawn();
+
+                ctx.font = "34px serif";
+                ctx.textAlign = "center";
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const it = items[i];
+                    it.y += it.vy;
+                    ctx.fillText(it.k.e, it.x, it.y);
+
+                    // 바구니 근처에서 받기
+                    if (it.y > H - 54 && it.y < H - 6 && Math.abs(it.x - basket.x) < 46) {
+                        score += it.k.p;
+                        if (score < 0) score = 0;
+                        scoreEl.textContent = score;
+                        // 받은 표시 (반짝)
+                        if (it.k.p < 0) { flash("#ef4444"); } else { flash("#22c55e"); }
+                        items.splice(i, 1);
+                        continue;
+                    }
+                    if (it.y > H + 30) items.splice(i, 1);
+                }
+
+                // 바구니
+                ctx.font = "46px serif";
+                ctx.fillText("🧺", basket.x, H - 8);
+
+                if (running) raf = requestAnimationFrame(loop);
+            }
+
+            let flashColor = null, flashT = 0;
+            function flash(c) { flashColor = c; flashT = 8; }
+
+            function move(clientX) {
+                const r = cv.getBoundingClientRect();
+                basket.x = Math.max(30, Math.min(W - 30, clientX - r.left));
+            }
+            cv.addEventListener("mousemove", e => move(e.clientX));
+            cv.addEventListener("touchmove", e => { move(e.touches[0].clientX); e.preventDefault(); }, { passive: false });
+
+            function start() {
+                resize();
+                items = []; score = 0; timeLeft = 30; frame = 0; running = true;
+                scoreEl.textContent = "0"; timeEl.textContent = "30";
+                basket.x = W / 2;
+                startBtn.textContent = "진행 중...";
+                startBtn.disabled = true;
+
+                loop();
+                timerId = setInterval(() => {
+                    timeLeft--;
+                    timeEl.textContent = timeLeft;
+                    if (timeLeft <= 0) end();
+                }, 1000);
+            }
+
+            function end() {
+                running = false;
+                clearInterval(timerId);
+                if (raf) cancelAnimationFrame(raf);
+                if (score > best) {
+                    best = score;
+                    localStorage.setItem("catch_best", String(best));
+                    bestEl.textContent = best;
+                    drawIdle("🏆 신기록! " + score + "점 · 다시 하려면 시작");
+                } else {
+                    drawIdle("끝! " + score + "점 · 다시 하려면 시작");
+                }
+                startBtn.textContent = "다시 하기 ▶";
+                startBtn.disabled = false;
+            }
+
+            startBtn.addEventListener("click", start);
+            window.addEventListener("resize", () => { if (!running) { resize(); drawIdle("게임 시작을 눌러주세요"); } });
+
+            resize();
+            drawIdle("게임 시작을 눌러주세요");
+        })();
+
+
+        /* ============================================================
+           2. 반응속도 테스트
+           ============================================================ */
+        (function () {
+            const pad = document.getElementById("reaction-pad");
+            const lastEl = document.getElementById("react-last");
+            const bestEl = document.getElementById("react-best");
+
+            let state = "idle";   // idle → wait → go → result/early
+            let startTime = 0, timeoutId = null;
+            let best = parseInt(localStorage.getItem("react_best") || "0", 10);
+            if (best) bestEl.textContent = best + " ms";
+
+            function setPad(cls, text) {
+                pad.className = "";
+                if (cls) pad.classList.add(cls);
+                pad.textContent = text;
+            }
+
+            pad.addEventListener("click", () => {
+                if (state === "idle" || state === "result" || state === "early") {
+                    // 대기 시작
+                    state = "wait";
+                    setPad("wait", "초록불이 될 때까지 기다려...");
+                    const delay = 1200 + Math.random() * 3000;
+                    timeoutId = setTimeout(() => {
+                        state = "go";
+                        startTime = performance.now();
+                        setPad("go", "지금 클릭!! ⚡");
+                    }, delay);
+                } else if (state === "wait") {
+                    // 너무 빨리 누름
+                    clearTimeout(timeoutId);
+                    state = "early";
+                    setPad("early", "너무 빨라요! 부정출발 😅 (다시 클릭)");
+                } else if (state === "go") {
+                    const ms = Math.round(performance.now() - startTime);
+                    state = "result";
+                    lastEl.textContent = ms + " ms";
+                    let msg = ms + " ms! ";
+                    if (ms < 200) msg += "괴물이네요 👾";
+                    else if (ms < 280) msg += "완전 빠름 🔥";
+                    else if (ms < 380) msg += "준수해요 👍";
+                    else msg += "느긋하네요 🐢";
+                    setPad("result", msg + " (다시 클릭)");
+                    if (!best || ms < best) {
+                        best = ms;
+                        localStorage.setItem("react_best", String(best));
+                        bestEl.textContent = best + " ms";
+                    }
+                }
+            });
+        })();
+
+
+        /* ============================================================
+           3. 폭죽 놀이
+           ============================================================ */
+        (function () {
+            const cv = document.getElementById("fw-canvas");
+            const ctx = cv.getContext("2d");
+            const H = 320;
+            let W = 700;
+            function resize() { W = cv.width = cv.clientWidth || 700; cv.height = H; }
+            resize();
+            window.addEventListener("resize", resize);
+
+            let particles = [];
+            const COLORS = ["#ff5252", "#ffb142", "#ffe66d", "#7bed9f", "#48dbfb", "#a29bfe", "#ff9ff3"];
+
+            function boom(x, y) {
+                const n = 34 + Math.floor(Math.random() * 20);
+                const col = COLORS[Math.floor(Math.random() * COLORS.length)];
+                for (let i = 0; i < n; i++) {
+                    const a = (Math.PI * 2 * i) / n + Math.random() * 0.3;
+                    const sp = 2 + Math.random() * 4;
+                    particles.push({
+                        x: x, y: y,
+                        vx: Math.cos(a) * sp,
+                        vy: Math.sin(a) * sp,
+                        life: 1,
+                        color: Math.random() < 0.3 ? COLORS[Math.floor(Math.random() * COLORS.length)] : col
+                    });
+                }
+            }
+
+            function tick() {
+                // 잔상 효과: 완전 지우지 않고 살짝 어둡게 덮기
+                ctx.fillStyle = "rgba(16,16,26,0.25)";
+                ctx.fillRect(0, 0, W, H);
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.vy += 0.06;          // 중력
+                    p.vx *= 0.99;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.012;
+                    if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                requestAnimationFrame(tick);
+            }
+            tick();
+
+            function fire(e) {
+                const r = cv.getBoundingClientRect();
+                const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+                const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+                boom(cx, cy);
+            }
+            cv.addEventListener("mousedown", fire);
+            cv.addEventListener("mousemove", e => { if (e.buttons === 1) fire(e); });
+            cv.addEventListener("touchstart", e => { fire(e); e.preventDefault(); }, { passive: false });
+            cv.addEventListener("touchmove", e => { fire(e); e.preventDefault(); }, { passive: false });
+
+            // 가끔 자동 폭죽
+            setInterval(() => {
+                if (particles.length < 60) boom(60 + Math.random() * (W - 120), 40 + Math.random() * (H - 120));
+            }, 1600);
+        })();
+
+
+        /* ============================================================
+           4. 코나미 치트키
+           ============================================================ */
+        (function () {
+            // 입력할 키 후보 (방향키 + 몇 개 알파벳)
+            const POOL = [
+                { k: "ArrowUp", s: "↑" }, { k: "ArrowDown", s: "↓" },
+                { k: "ArrowLeft", s: "←" }, { k: "ArrowRight", s: "→" },
+                { k: "a", s: "A" }, { k: "b", s: "B" }, { k: "x", s: "X" }, { k: "y", s: "Y" }
+            ];
+            const sym = {};
+            POOL.forEach(p => sym[p.k] = p.s);
+            const hintEl = document.querySelector(".konami-hint");
+
+            // 매번 랜덤 순서 생성 (5~7개)
+            let code = [];
+            function newCode() {
+                code = [];
+                const len = 5 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < len; i++) code.push(POOL[Math.floor(Math.random() * POOL.length)].k);
+                hintEl.textContent = code.map(k => sym[k]).join(" ");
+            }
+
+            let idx = 0;
+            const progress = document.getElementById("konami-progress");
+            const banner = document.getElementById("cheat-banner");
+            const bannerText = document.getElementById("cheat-text");
+            const stopBtn = document.getElementById("cheat-stop");
+            const stage = document.getElementById("stage");
+
+            // 매번 랜덤으로 하나 걸림
+            const EFFECTS = [
+                { name: "🌀 회오리 모드", cls: "cheat-spin" },
+                { name: "🙃 거꾸로 세상", cls: "cheat-flip" },
+                { name: "🪩 디스코 파티", cls: "cheat-disco" },
+                { name: "🌈 색반전 우주", cls: "cheat-invert" },
+                { name: "📳 대지진", cls: "cheat-quake" },
+                { name: "🫧 둥실둥실", cls: "cheat-float" },
+                { name: "🎊 이모지 폭우", rain: true }
+            ];
+            let active = null, lastIdx = -1;
+
+            function burst() {
+                const em = ["💸", "🤑", "🎉", "🦄", "👽", "💥", "🕺", "🍕", "⭐", "🎊"];
+                for (let i = 0; i < 40; i++) {
+                    const c = document.createElement("div");
+                    c.className = "cheat-rain";
+                    c.textContent = em[Math.floor(Math.random() * em.length)];
+                    c.style.cssText = "position:fixed;z-index:99998;pointer-events:none;top:-30px;left:" +
+                        (Math.random() * 100) + "vw;font-size:" + (24 + Math.random() * 30) + "px;";
+                    document.body.appendChild(c);
+                    let y = -30; const sp = 3 + Math.random() * 5;
+                    (function fall() {
+                        y += sp; c.style.top = y + "px";
+                        if (y < window.innerHeight + 40) requestAnimationFrame(fall);
+                        else c.remove();
+                    })();
+                }
+            }
+
+            function start() {
+                // 직전과 다른 효과 뽑기
+                let i;
+                do { i = Math.floor(Math.random() * EFFECTS.length); }
+                while (i === lastIdx && EFFECTS.length > 1);
+                lastIdx = i;
+                const eff = EFFECTS[i];
+
+                let rainId = null;
+                if (eff.cls) stage.classList.add(eff.cls);
+                if (eff.rain) rainId = setInterval(burst, 700);
+                active = { eff, rainId };
+
+                banner.classList.add("show");
+                bannerText.textContent = "🎉 랜덤 효과 발동! 🎉";
+                burst(); // 발동할 때마다 축포 한 방
+            }
+
+            function stop() {
+                if (!active) return;
+                if (active.eff.cls) stage.classList.remove(active.eff.cls);
+                if (active.rainId) clearInterval(active.rainId);
+                document.querySelectorAll(".cheat-rain").forEach(n => n.remove());
+                active = null;
+                banner.classList.remove("show");
+            }
+
+            stopBtn.addEventListener("click", stop);
+
+            document.addEventListener("keydown", e => {
+                if (e.key === "Escape") { stop(); return; }
+
+                const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+                if (key === code[idx]) {
+                    idx++;
+                    progress.textContent = code.slice(0, idx).map(k => sym[k]).join(" ");
+                    if (idx === code.length) {
+                        idx = 0; progress.textContent = "";
+                        if (active) stop(); else start();
+                        newCode(); // 다음엔 다른 순서
+                    }
+                } else {
+                    idx = (key === code[0]) ? 1 : 0;
+                    progress.textContent = idx ? sym[code[0]] : "";
+                }
+            });
+
+            newCode(); // 첫 순서 생성
+        })();
+    </script>
+
+</body>
+
+</html>
