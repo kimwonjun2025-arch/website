@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>About Me</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="page about-bg">
+
+    <nav class="navbar">
+        <a href="index.html">Home</a>
+        <a href="about.html" class="active">About</a>
+        <a href="journey.html">Journey</a>
+        <a href="projects.html">Projects</a>
+    </nav>
+
+    <div class="about">
+
+        <h1 class="about-title">
+            About Me <span class="wave">👋</span>
+        </h1>
+
+        <p class="about-lead">
+            Hi, I'm Wonjun Kim.<br>
+            An accounting student fascinated by finding the interesting signals within patterns.
+        </p>
+
+
+        <!-- 마우스 따라 기우는 카드 -->
+        <div class="card" id="tiltCard">
+            <h2>Who am I?</h2>
+            <p>
+                I'm a BSBA student majoring in Accounting with a minor in Data Science
+                at Northeastern University. I enjoy turning messy data into clear,
+                meaningful insights — combining a financial mindset with analytical tools.
+            </p>
+        </div>
+
+
+        <!-- 경력 -->
+        <div class="card">
+            <h2>Experience</h2>
+
+            <div class="exp-item">
+                <div class="exp-head">
+                    <span class="exp-role">Marketing Intern — <span class="exp-company">IDNB</span></span>
+                    <span class="exp-date">Jun – Aug 2025</span>
+                </div>
+                <p class="exp-desc">
+                    Participated in analyzing the tonic water market in Korea,
+                    gathering and interpreting market data to support business decisions.
+                </p>
+            </div>
+
+            <div class="exp-item">
+                <div class="exp-head">
+                    <span class="exp-role">Intern — <span class="exp-company">ODA Technology</span></span>
+                    <span class="exp-date">Jul 2026</span>
+                </div>
+                <p class="exp-desc">
+                    Gained hands-on skills in an MES (Manufacturing Execution System),
+                    Excel, inventory management, and preparing for trade exhibitions.
+                </p>
+            </div>
+        </div>
+
+
+        <!-- 스킬 바 (로딩 시 채워짐) -->
+        <div class="card">
+            <h2>Skills</h2>
+
+            <div class="skill">
+                <div class="skill-name"><span>Excel · Financial Modeling</span><span>90%</span></div>
+                <div class="skill-bar"><div class="skill-fill" style="--level: 90%;"></div></div>
+            </div>
+
+            <div class="skill">
+                <div class="skill-name"><span>Accounting</span><span>85%</span></div>
+                <div class="skill-bar"><div class="skill-fill" style="--level: 85%;"></div></div>
+            </div>
+
+            <div class="skill">
+                <div class="skill-name"><span>Data Analysis</span><span>80%</span></div>
+                <div class="skill-bar"><div class="skill-fill" style="--level: 80%;"></div></div>
+            </div>
+        </div>
+
+
+        <!-- 연락처 -->
+        <p class="contact">
+            📫 <a href="mailto:kimwonjun2025@gmail.com">kimwonjun2025@gmail.com</a>
+        </p>
+
+
+        <!-- 클릭하면 답이 나오는 재미 요소 -->
+        <h2 style="letter-spacing:2px;">Fun Facts <small style="color:#94a3b8;font-size:14px;">(click me!)</small></h2>
+
+        <div class="facts">
+
+            <div class="fact" onclick="this.classList.toggle('open')">
+                <div class="question">🎵 Biggest passion?</div>
+                <div class="answer">Music — I can't live without it!</div>
+            </div>
+
+            <div class="fact" onclick="this.classList.toggle('open')">
+                <div class="question">🥁 Do you play any instruments?</div>
+                <div class="answer">Yes — drums and guitar!</div>
+            </div>
+
+            <div class="fact" onclick="this.classList.toggle('open')">
+                <div class="question">🎯 Current goal?</div>
+                <div class="answer">Building an awesome portfolio 🚀</div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="background"></div>
+
+    <!-- 오른쪽 아래 게임 버튼 -->
+    <a href="rhythm.html" class="float-game">🥁 Play Rhythm Tap</a>
+
+
+    <script>
+        // 카드가 마우스를 따라 살짝 기울어지는 효과
+        const card = document.getElementById("tiltCard");
+
+        card.addEventListener("mousemove", (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const rotateY = ((x / rect.width) - 0.5) * 12;
+            const rotateX = ((y / rect.height) - 0.5) * -12;
+
+            card.style.transform =
+                `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        card.addEventListener("mouseleave", () => {
+            card.style.transform = "perspective(600px) rotateX(0) rotateY(0)";
+        });
+
+
+        // 클릭할 때마다 클릭 지점에서 물결이 퍼짐
+        document.addEventListener("click", (e) => {
+            const r = document.createElement("span");
+            r.className = "click-ripple";
+            r.style.left = e.clientX + "px";
+            r.style.top  = e.clientY + "px";
+            document.body.appendChild(r);
+            r.addEventListener("animationend", () => r.remove());
+        });
+
+
+        // Fun Facts 클릭하면 이모지 컨페티가 터짐
+        const partyEmojis = ["🎵", "🎉", "✨", "🥁", "🎸", "⭐", "💫"];
+
+        document.querySelectorAll(".fact").forEach((fact) => {
+            fact.addEventListener("click", (e) => {
+                const rect = fact.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+
+                for (let i = 0; i < 12; i++) {
+                    const piece = document.createElement("span");
+                    piece.className = "confetti";
+                    piece.textContent =
+                        partyEmojis[Math.floor(Math.random() * partyEmojis.length)];
+
+                    piece.style.left = cx + "px";
+                    piece.style.top  = cy + "px";
+
+                    // 랜덤 방향으로 튀기
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist  = 60 + Math.random() * 90;
+                    piece.style.setProperty("--dx", Math.cos(angle) * dist + "px");
+                    piece.style.setProperty("--dy", Math.sin(angle) * dist + "px");
+                    piece.style.setProperty("--r", (Math.random() * 720 - 360) + "deg");
+
+                    document.body.appendChild(piece);
+                    piece.addEventListener("animationend", () => piece.remove());
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
