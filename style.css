@@ -193,6 +193,20 @@ button:hover {
     color: #0f172a;
 
 }
+
+
+/* 홈 버튼 감싼 링크의 기본 밑줄 제거 (방문 후 보라색 선으로 보이던 것) */
+.buttons a {
+    text-decoration: none;
+}
+
+/* about/journey/projects 버튼만 살짝 오른쪽으로 */
+.buttons {
+    position: relative;
+    left: 6px;
+}
+
+
 /* ===== 폭탄 버튼 & 폭발 효과 ===== */
 
 .bomb {
@@ -237,8 +251,8 @@ button:hover {
 }
 
 
-/* 돈 버튼 (폭탄 왼쪽) */
-.money-btn {
+/* 칼 버튼 (폭탄 왼쪽) */
+.knife-btn {
     position: fixed;
     bottom: 30px;
     right: 105px;
@@ -256,43 +270,356 @@ button:hover {
     padding: 0;
     margin: 0;
 
-    transition: transform 0.2s ease;
+    transition: transform 0.15s ease;
     z-index: 10;
 }
 
-.money-btn:hover {
-    transform: scale(1.2) rotate(10deg);
+.knife-btn:hover {
+    transform: scale(1.2) rotate(-12deg);
     background: none;
     color: inherit;
 }
 
-.money-btn:active {
-    transform: scale(0.9);
+/* 칼 휘두르는 순간 */
+.knife-btn.swing {
+    animation: knifeSwing 0.25s ease;
+}
+
+@keyframes knifeSwing {
+    0%   { transform: rotate(-35deg) scale(1.1); }
+    50%  { transform: rotate(30deg)  scale(1.25); }
+    100% { transform: rotate(0deg)   scale(1); }
 }
 
 
-/* 떨어지는 돈 한 장 */
-.cash {
+/* 화면을 가르는 검기 — 초승달 칼날 + 에너지 오라 + 잔상 + 렌즈플레어 */
+.slash {
     position: fixed;
-    top: -60px;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
 
-    font-size: 34px;
+    transform: rotate(var(--ang, 0deg)) scale(var(--dir, 1), 1);
 
     pointer-events: none;
-    z-index: 15;
-
-    animation: cashFall linear forwards;
+    z-index: 60;
 }
 
-@keyframes cashFall {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(110vh) rotate(720deg);
-        opacity: 1;
-    }
+/* 공통: 화면을 가로지르는 납작한 타원(양끝 뾰족한 칼날 모양) */
+.slash .aura,
+.slash .line,
+.slash .trail {
+    position: absolute;
+    left: -130vmax;
+    width: 260vmax;
+
+    border-radius: 50%;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+}
+
+/* 뒤에 은은하게 퍼지는 파란 에너지 오라 */
+.slash .aura {
+    top: -28px;
+    height: 56px;
+
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(30,6,58,0.55) 44%,
+        rgba(86,20,168,0.72) 50%,
+        rgba(30,6,58,0.55) 56%,
+        transparent);
+    filter: blur(13px);
+
+    animation: slashWipe 0.4s cubic-bezier(.15,.75,.2,1) forwards;
+}
+
+/* 검보라 코어 (양옆은 흑빛, 가운데만 짙은 보라 심지) */
+.slash .line {
+    top: -9px;
+    height: 18px;
+
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(8,2,20,0.75) 28%,
+        rgba(34,8,72,0.9) 40%,
+        rgba(96,24,190,0.95) 46%,
+        #7d1fd6 50%,
+        rgba(96,24,190,0.95) 54%,
+        rgba(34,8,72,0.9) 60%,
+        rgba(8,2,20,0.75) 72%,
+        transparent);
+    box-shadow:
+        0 0 14px 3px rgba(112,28,206,0.8),
+        0 0 44px 12px rgba(18,2,44,0.7);
+
+    animation: slashWipe 0.4s cubic-bezier(.15,.75,.2,1) forwards;
+}
+
+/* 살짝 어긋난 잔상 두 줄 */
+.slash .trail {
+    height: 7px;
+    background: linear-gradient(90deg,
+        transparent, rgba(74,18,150,0.6) 50%, transparent);
+}
+
+.slash .t1 {
+    top: -16px;
+    opacity: 0.5;
+    animation: slashWipe 0.4s cubic-bezier(.15,.75,.2,1) forwards;
+}
+
+.slash .t2 {
+    top: 9px;
+    opacity: 0.35;
+    animation: slashWipe 0.4s cubic-bezier(.15,.75,.2,1) forwards;
+}
+
+/* 칼날 끝에서 달려가는 섬광 + 렌즈플레어 십자 */
+.slash .glint {
+    position: absolute;
+    left: -130vmax;
+    top: -19px;
+    width: 38px;
+    height: 38px;
+    margin-left: -19px;
+    border-radius: 50%;
+
+    background: radial-gradient(circle,
+        #8b2fe6, rgba(100,24,192,0.85) 35%, transparent 70%);
+    box-shadow: 0 0 32px 13px rgba(84,16,172,0.9);
+
+    animation: glintTravel 0.4s cubic-bezier(.15,.75,.2,1) forwards;
+}
+
+.slash .glint .flare {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150px;
+    height: 3px;
+    margin: -1.5px 0 0 -75px;
+
+    background: linear-gradient(90deg, transparent, #ffffff, transparent);
+    box-shadow: 0 0 10px #ffffff;
+}
+
+.slash .glint .flare::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 3px;
+    height: 64px;
+    margin: -32px 0 0 -1.5px;
+
+    background: linear-gradient(rgba(255,255,255,0), #ffffff, rgba(255,255,255,0));
+}
+
+/* 마무리 일격은 훨씬 굵고 크게 */
+.slash.big .aura  { height: 84px; top: -42px; }
+.slash.big .line  { height: 30px; top: -15px; }
+.slash.big .glint { width: 60px; height: 60px; margin-left: -30px; top: -30px; }
+
+@keyframes slashWipe {
+    0%   { transform: scaleX(0); opacity: 1; }
+    65%  { transform: scaleX(1); opacity: 1; }
+    100% { transform: scaleX(1); opacity: 0; }
+}
+
+@keyframes glintTravel {
+    0%   { transform: translateX(0);       opacity: 0; }
+    12%  { opacity: 1; }
+    80%  { transform: translateX(260vmax); opacity: 1; }
+    100% { transform: translateX(260vmax); opacity: 0; }
+}
+
+
+/* 검기에서 튀는 파란 스파크 */
+.slash-spark {
+    position: fixed;
+    border-radius: 50%;
+
+    background: #a05be8;
+    box-shadow: 0 0 8px 2px rgba(96,24,186,0.9);
+
+    pointer-events: none;
+    z-index: 60;
+
+    animation: slashSpark var(--dur, 0.5s) ease-out forwards;
+}
+
+@keyframes slashSpark {
+    0%   { transform: translate(0, 0) scale(1);                       opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0.2);     opacity: 0; }
+}
+
+
+/* 검기에 튀는 벼락(전격) */
+.bolt {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+    z-index: 61;
+    overflow: visible;
+
+    animation: boltFlick 0.24s linear forwards;
+}
+
+.bolt path {
+    fill: none;
+    stroke: #0a0a0a;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    /* 검은 번개 + 흰/크림슨 테두리 글로우 (어두운 배경에서도 보이게) */
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.85)) drop-shadow(0 0 8px rgba(126,34,214,0.9));
+}
+
+@keyframes boltFlick {
+    0%   { opacity: 0; }
+    10%  { opacity: 1; }
+    35%  { opacity: 0.35; }
+    55%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+
+/* ===== 검빨(크림슨) 세션: body.slash-red 일 때만 검기 팔레트를 빨강으로 되돌림 ===== */
+body.slash-red .aura {
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(52,2,19,0.55) 44%,
+        rgba(135,12,46,0.72) 50%,
+        rgba(52,2,19,0.55) 56%,
+        transparent);
+}
+
+body.slash-red .line {
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(14,0,6,0.75) 28%,
+        rgba(60,4,22,0.9) 40%,
+        rgba(150,12,44,0.95) 46%,
+        #d81a3d 50%,
+        rgba(150,12,44,0.95) 54%,
+        rgba(60,4,22,0.9) 60%,
+        rgba(14,0,6,0.75) 72%,
+        transparent);
+    box-shadow:
+        0 0 14px 3px rgba(175,14,48,0.8),
+        0 0 44px 12px rgba(30,0,10,0.7);
+}
+
+body.slash-red .trail {
+    background: linear-gradient(90deg,
+        transparent, rgba(120,10,40,0.6) 50%, transparent);
+}
+
+body.slash-red .glint {
+    background: radial-gradient(circle,
+        #db2545, rgba(155,14,48,0.85) 35%, transparent 70%);
+    box-shadow: 0 0 32px 13px rgba(135,8,40,0.9);
+}
+
+body.slash-red .slash-spark {
+    background: #e35069;
+    box-shadow: 0 0 8px 2px rgba(150,12,48,0.9);
+}
+
+body.slash-red .bolt path {
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.85)) drop-shadow(0 0 8px rgba(190,16,58,0.9));
+}
+
+
+/* 검기가 지나간 자리에 남는 유리 금 (누적) */
+.crack {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+    z-index: 57;
+    overflow: visible;
+}
+
+.crack path {
+    fill: none;
+    stroke: rgba(0,0,0,0.9);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    /* 어두운 배경에서도 보이게 얇은 흰 테두리 (진짜 깨진 유리 느낌) */
+    filter: drop-shadow(0 0 1.2px rgba(255,255,255,0.85));
+}
+
+
+/* 화면 껐다 켜기 (휘치킹!) */
+.power {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    z-index: 90;
+
+    overflow: hidden;
+}
+
+/* CRT 스캔 라인 (수축/확장) */
+.crt-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+
+    height: 3px;
+    background: #ffffff;
+    box-shadow: 0 0 26px 8px rgba(255,255,255,0.95);
+
+    transform: translateY(-50%) scaleY(1);
+    transform-origin: 50% 50%;
+    opacity: 0;
+}
+
+/* 화면이 점으로 수축했을 때 남는 중앙 점 */
+.crt-dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+
+    background: #ffffff;
+    box-shadow: 0 0 24px 8px rgba(255,255,255,0.95);
+
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+}
+
+/* 박살 순간 청록 충격파 링 */
+.break-ring {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+
+    border-radius: 50%;
+    border: 8px solid rgba(185,22,60,0.95);
+    box-shadow: 0 0 40px rgba(95,0,28,0.85);
+
+    pointer-events: none;
+    z-index: 62;
+
+    transform: scale(0);
+    animation: fxShock 0.7s cubic-bezier(.12,.7,.25,1) forwards;
 }
 
 
@@ -323,6 +650,118 @@ button:hover {
     0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
     40%  { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
     100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+
+/* ===== 현실적인 폭발 파티클 이펙트 ===== */
+
+/* 화면 전체 섬광 */
+.fx-flash {
+    position: fixed;
+    inset: 0;
+
+    background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%),
+        rgba(255,255,245,0.95),
+        rgba(255,170,60,0.6) 22%,
+        rgba(255,90,20,0.25) 42%,
+        transparent 62%);
+
+    pointer-events: none;
+    z-index: 19;
+    opacity: 0;
+
+    animation: fxFlash 0.55s ease-out forwards;
+}
+
+@keyframes fxFlash {
+    0%   { opacity: 0; }
+    6%   { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+
+/* 퍼져나가는 충격파 링 */
+.fx-shock {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+
+    border-radius: 50%;
+    border: 6px solid rgba(255,210,140,0.9);
+    box-shadow: 0 0 30px rgba(255,170,60,0.6);
+
+    pointer-events: none;
+    z-index: 18;
+
+    transform: scale(0);
+    animation: fxShock 0.75s cubic-bezier(.12,.7,.25,1) forwards;
+}
+
+@keyframes fxShock {
+    0%   { transform: scale(0);  opacity: 0.95; border-width: 8px; }
+    100% { transform: scale(32); opacity: 0;    border-width: 0.5px; }
+}
+
+
+/* 사방으로 튀는 불똥/파편 */
+.fx-spark {
+    position: fixed;
+    border-radius: 50%;
+
+    pointer-events: none;
+    z-index: 18;
+    will-change: transform, opacity;
+
+    animation: fxSpark var(--dur, 0.9s) cubic-bezier(.15,.6,.3,1) forwards;
+}
+
+@keyframes fxSpark {
+    0%   { transform: translate(0, 0) scale(1);        opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0.15); opacity: 0; }
+}
+
+
+/* 피어오르는 연기 */
+.fx-smoke {
+    position: fixed;
+    width: 70px;
+    height: 70px;
+
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        rgba(110,110,115,0.5),
+        rgba(80,80,85,0.25) 55%,
+        transparent 72%);
+
+    pointer-events: none;
+    z-index: 17;
+
+    animation: fxSmoke 1.5s ease-out forwards;
+}
+
+@keyframes fxSmoke {
+    0%   { transform: translate(-50%, -50%) translate(var(--sx, 0), 0) scale(0.4); opacity: 0.55; }
+    100% { transform: translate(-50%, -50%) translate(var(--sx, 0), -170px) scale(2.4); opacity: 0; }
+}
+
+
+/* 폭발 순간 화면 흔들림 */
+.screen-shake {
+    animation: screenShake 0.5s cubic-bezier(.36,.07,.19,.97);
+}
+
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-8px, 4px); }
+    20% { transform: translate(9px, -6px); }
+    30% { transform: translate(-11px, -3px); }
+    40% { transform: translate(10px, 6px); }
+    50% { transform: translate(-7px, 5px); }
+    60% { transform: translate(8px, -4px); }
+    70% { transform: translate(-5px, 3px); }
+    80% { transform: translate(4px, -2px); }
+    90% { transform: translate(-2px, 1px); }
 }
 
 
@@ -1178,12 +1617,9 @@ body.about-bg .about-title .wave {
 /* ===== Journey 밤하늘 테마 ===== */
 body.journey-bg {
     background:
-        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.9), transparent),
         radial-gradient(2px 2px at 70% 65%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.8), transparent),
         radial-gradient(1px 1px at 85% 22%, rgba(255,255,255,0.6), transparent),
         radial-gradient(1.5px 1.5px at 55% 48%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1px 1px at 10% 60%, rgba(255,255,255,0.6), transparent),
         linear-gradient(160deg, #4b4699, #34407f 50%, #2a5ba3);
 
     background-attachment: fixed;
