@@ -50,20 +50,12 @@
     <!-- 폭탄 버튼 -->
     <button class="bomb" id="bomb" title="Don't press me...">💣</button>
 
-    <!-- 돈 내리는 버튼 -->
-    <button class="money-btn" id="money" title="Make it rain!">💰</button>
-
-    <!-- 폭발 이펙트 -->
-    <div class="boom" id="boom">💥</div>
-
-    <!-- 되돌리기 -->
-    <button class="reset-btn" id="reset">PUT IT BACK 🔧</button>
+    <!-- 칼 버튼 -->
+    <button class="knife-btn" id="knife" title="Slash!">🔪</button>
 
 
     <script>
         const bomb  = document.getElementById("bomb");
-        const boom  = document.getElementById("boom");
-        const reset = document.getElementById("reset");
 
         // 날아갈 요소들: 이름 글자 + 문구 + 버튼
         const pieces = Array.from(document.querySelectorAll(
@@ -73,7 +65,7 @@
         // 원래 스타일 저장 (되돌릴 때 복원용)
         const origStyle = pieces.map((el) => el.getAttribute("style"));
 
-        let exploded = false;
+        let active = false;      // 화면이 흐트러진 상태 (폭발 중)
         let rafId = null;
         let parts = [];
 
@@ -83,8 +75,8 @@
         const WALL_BOUNCE  = 0.72;   // 벽에 튕길 때 남는 속도
 
         bomb.addEventListener("click", () => {
-            if (exploded) return;
-            exploded = true;
+            if (active) return;
+            active = true;
 
             // 심지 타들어가는 연출
             bomb.classList.add("lit");
@@ -92,21 +84,28 @@
             setTimeout(() => {
                 bomb.classList.remove("lit");
 
-                // 중앙에서 BOOM!
-                boom.classList.add("show");
+                // 중앙에서 진짜 터지는 이펙트 (섬광·충격파·불똥·연기·화면 흔들림)
+                explodeFX(window.innerWidth / 2, window.innerHeight / 2);
 
-                // 각 조각을 현재 위치에 고정시키고 초기 속도 부여
-                parts = pieces.map((el) => {
-                    const rect = el.getBoundingClientRect();
+                // 등장(뚝뚝 떨어지는) 연출 중에 터져도 '최종 위치' 기준으로 잡히도록
+                // 먼저 애니메이션을 정지시킨 뒤 측정 (안 그러면 애니메이션 중간 위치가 원위치로 저장됨)
+                pieces.forEach((el) => { el.style.animation = "none"; });
+
+                // 원래 위치를 한 번에 측정 (하나라도 fixed로 바꾸면 뒤 글자들이 밀리므로 측정을 먼저)
+                const rects = pieces.map((el) => el.getBoundingClientRect());
+
+                // 각 조각을 원래 자리에 고정시키고 초기 속도 부여
+                parts = pieces.map((el, i) => {
+                    const rect = rects[i];
 
                     el.style.position = "fixed";
                     el.style.left = "0";
                     el.style.top  = "0";
                     el.style.margin = "0";
-                    el.style.animation = "none";
                     el.style.transition = "none";
                     el.style.opacity = "1";   // 애니메이션 끄면 기본 opacity가 0이라 사라짐 → 보이게 고정
                     el.style.zIndex = "14";
+                    el.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
 
                     return {
                         el,
@@ -114,6 +113,8 @@
                         y: rect.top,
                         w: rect.width,
                         h: rect.height,
+                        homeX: rect.left,   // 원래 자리 (복귀용)
+                        homeY: rect.top,
                         vx: (Math.random() - 0.5) * 38,        // 좌우로 팍
                         vy: -(Math.random() * 22 + 8),          // 위로 솟구쳤다가
                         angle: 0,
@@ -123,10 +124,78 @@
 
                 startPhysics();
 
-                // 되돌리기 버튼 등장
-                setTimeout(() => reset.classList.add("show"), 800);
+                // 잠시 뒤 스스로 서서히 제자리로
+                setTimeout(reassemble, 2800);
             }, 700);
         });
+
+        // ===== 현실적인 폭발 이펙트 =====
+        function explodeFX(cx, cy) {
+            const layer = document.body;
+
+            // 화면 흔들림
+            document.body.classList.add("screen-shake");
+            setTimeout(() => document.body.classList.remove("screen-shake"), 500);
+
+            // 1) 섬광
+            const flash = document.createElement("div");
+            flash.className = "fx-flash";
+            flash.style.setProperty("--fx", cx + "px");
+            flash.style.setProperty("--fy", cy + "px");
+            layer.appendChild(flash);
+            flash.addEventListener("animationend", () => flash.remove());
+
+            // 2) 충격파 링 (2겹)
+            for (let i = 0; i < 2; i++) {
+                const shock = document.createElement("div");
+                shock.className = "fx-shock";
+                shock.style.left = cx + "px";
+                shock.style.top = cy + "px";
+                shock.style.animationDelay = (i * 0.08) + "s";
+                layer.appendChild(shock);
+                shock.addEventListener("animationend", () => shock.remove());
+            }
+
+            // 3) 불똥/파편
+            const colors = ["#fff7e0", "#ffd27a", "#ff9d2e", "#ff5a1a", "#ff2d0f"];
+            for (let i = 0; i < 46; i++) {
+                const spark = document.createElement("div");
+                spark.className = "fx-spark";
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 90 + Math.random() * 360;
+                const tx = Math.cos(angle) * dist;
+                // 중력 느낌: 아래로 살짝 쏠리게
+                const ty = Math.sin(angle) * dist + 60 + Math.random() * 120;
+                const size = 4 + Math.random() * 9;
+                const c = colors[Math.floor(Math.random() * colors.length)];
+
+                spark.style.left = cx + "px";
+                spark.style.top = cy + "px";
+                spark.style.width = size + "px";
+                spark.style.height = size + "px";
+                spark.style.background = c;
+                spark.style.boxShadow = `0 0 ${6 + size}px ${size / 2}px ${c}`;
+                spark.style.setProperty("--tx", tx + "px");
+                spark.style.setProperty("--ty", ty + "px");
+                spark.style.setProperty("--dur", (0.55 + Math.random() * 0.7) + "s");
+
+                layer.appendChild(spark);
+                spark.addEventListener("animationend", () => spark.remove());
+            }
+
+            // 4) 연기
+            for (let i = 0; i < 6; i++) {
+                const smoke = document.createElement("div");
+                smoke.className = "fx-smoke";
+                smoke.style.left = cx + "px";
+                smoke.style.top = cy + "px";
+                smoke.style.setProperty("--sx", ((Math.random() - 0.5) * 160) + "px");
+                smoke.style.animationDelay = (Math.random() * 0.15) + "s";
+                layer.appendChild(smoke);
+                smoke.addEventListener("animationend", () => smoke.remove());
+            }
+        }
 
         function startPhysics() {
             const W = window.innerWidth;
@@ -164,53 +233,316 @@
             step();
         }
 
-        // ===== 돈 내리기 =====
-        const money = document.getElementById("money");
-        const bills = ["💵", "💴", "💶", "💷", "💰", "🤑"];
+        // 폭발한 글자들이 서서히 원래 자리로 되돌아옴
+        let returning = false;
+        function reassemble() {
+            if (!active || returning) return;
+            returning = true;
 
-        money.addEventListener("click", () => {
-            // 한 번 누르면 40장 정도 우수수
-            for (let i = 0; i < 40; i++) {
-                const cash = document.createElement("div");
-                cash.className = "cash";
-                cash.textContent = bills[i % bills.length];
+            // 물리 정지
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = null;
 
-                cash.style.left = Math.random() * 100 + "vw";
-                cash.style.fontSize = (24 + Math.random() * 24) + "px";
-                cash.style.animationDuration = (2 + Math.random() * 2) + "s";
-                cash.style.animationDelay = (Math.random() * 0.8) + "s";
+            // 현재 위치 → 원래 자리로 부드럽게 트윈 (글자마다 살짝 시차)
+            parts.forEach((p, i) => {
+                p.el.style.transition =
+                    `transform 1.1s cubic-bezier(.2,.85,.25,1) ${i * 0.04}s`;
+                p.el.style.transform =
+                    `translate(${p.homeX}px, ${p.homeY}px) rotate(0deg)`;
+            });
 
-                document.body.appendChild(cash);
+            // 다 돌아오면 상태 초기화 (글자는 원래 자리에 고정된 채 유지)
+            setTimeout(() => {
+                parts = [];
+                active = false;
+                returning = false;
+            }, 1100 + parts.length * 40 + 60);
+        }
 
-                // 다 떨어지면 제거
-                cash.addEventListener("animationend", () => cash.remove());
+
+        // ===== 칼: 누를 때마다 검기 한 방 → 금이 쌓임 → 마지막엔 화면 껐다 켜기(휘치킹!) =====
+        const knife = document.getElementById("knife");
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        const BREAK_AT = 6;      // 이만큼 베면 화면이 박살 → 리셋
+        let cracks = [];         // 화면에 쌓인 금(SVG)들
+        let breaking = false;    // 껐다 켜는 연출 중
+
+        // 검기와 함께 번쩍이는 벼락(전격) 몇 줄기
+        function spawnLightning(A, big) {
+            const W = window.innerWidth, H = window.innerHeight;
+            const cx = W / 2, cy = H / 2;
+            const rad = A * Math.PI / 180;
+            const dx = Math.cos(rad), dy = Math.sin(rad);
+
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("class", "bolt");
+            svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+            svg.setAttribute("preserveAspectRatio", "none");
+
+            const bolts = (big ? 5 : 3) + Math.floor(Math.random() * 3);
+            for (let k = 0; k < bolts; k++) {
+                // 컷 선 위 임의 지점에서 시작
+                const start = (Math.random() - 0.5) * Math.min(W, H) * 0.9;
+                let x = cx + dx * start, y = cy + dy * start;
+                // 컷을 따라가되 크게 지그재그
+                const bAng = (A + (Math.random() - 0.5) * 45) * Math.PI / 180;
+                const bx = Math.cos(bAng), by = Math.sin(bAng);
+                const bnx = -by, bny = bx;
+                const steps = 6 + Math.floor(Math.random() * 4);
+                const seg = 110 + Math.random() * 90;
+
+                let d = `M${x.toFixed(1)} ${y.toFixed(1)} `;
+                for (let i = 1; i <= steps; i++) {
+                    x += bx * seg + bnx * (Math.random() - 0.5) * 75;
+                    y += by * seg + bny * (Math.random() - 0.5) * 75;
+                    d += `L${x.toFixed(1)} ${y.toFixed(1)} `;
+                }
+                const p = document.createElementNS(svgNS, "path");
+                p.setAttribute("d", d);
+                svg.appendChild(p);
+            }
+
+            document.body.appendChild(svg);
+            svg.addEventListener("animationend", () => svg.remove());
+            setTimeout(() => svg.remove(), 450);
+        }
+
+        // 화면을 가르는 검기 한 방 (칼날 코어 + 오라 + 잔상 + 렌즈플레어 + 스파크 + 벼락)
+        function spawnSlash(A, big) {
+            const s = document.createElement("div");
+            s.className = "slash" + (big ? " big" : "");
+            s.style.setProperty("--ang", A + "deg");
+            s.style.setProperty("--dir", Math.random() < 0.5 ? 1 : -1);
+            s.innerHTML =
+                '<div class="aura"></div>' +
+                '<div class="trail t1"></div>' +
+                '<div class="trail t2"></div>' +
+                '<div class="line"></div>' +
+                '<div class="glint"><span class="flare"></span></div>';
+            document.body.appendChild(s);
+            setTimeout(() => s.remove(), big ? 800 : 560);
+
+            spawnLightning(A, big);
+
+            // 검기 자리에서 튀는 파란 스파크
+            const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+            const rad = A * Math.PI / 180;
+            const dx = Math.cos(rad), dy = Math.sin(rad);   // 검기 방향
+            const nx = -dy, ny = dx;                          // 수직
+            const count = big ? 20 : 12;
+            for (let i = 0; i < count; i++) {
+                const along = (Math.random() - 0.5) * (big ? 950 : 620);
+                const side = Math.random() < 0.5 ? 1 : -1;
+                const dist = 40 + Math.random() * 150;
+                const tx = nx * dist * side + dx * (Math.random() - 0.5) * 70;
+                const ty = ny * dist * side + dy * (Math.random() - 0.5) * 70;
+                const size = 2 + Math.random() * 4;
+
+                const sp = document.createElement("div");
+                sp.className = "slash-spark";
+                sp.style.left = (cx + dx * along) + "px";
+                sp.style.top = (cy + dy * along) + "px";
+                sp.style.width = size + "px";
+                sp.style.height = size + "px";
+                sp.style.setProperty("--tx", tx + "px");
+                sp.style.setProperty("--ty", ty + "px");
+                sp.style.setProperty("--dur", (0.35 + Math.random() * 0.4) + "s");
+                document.body.appendChild(sp);
+                sp.addEventListener("animationend", () => sp.remove());
+            }
+        }
+
+        // 화면 흔들기 (금이 많을수록 세게)
+        function shake(amp) {
+            document.body.animate([
+                { transform: "translate(0,0)" },
+                { transform: `translate(${-amp}px, ${amp * 0.5}px)` },
+                { transform: `translate(${amp}px, ${-amp * 0.6}px)` },
+                { transform: `translate(${-amp * 0.6}px, ${amp * 0.4}px)` },
+                { transform: "translate(0,0)" }
+            ], { duration: 240, easing: "ease-out" });
+        }
+
+        // 검기 지나간 자리에 유리 금 남기기
+        function addCrack(A) {
+            const W = window.innerWidth, H = window.innerHeight;
+            const rad = A * Math.PI / 180;
+            const dx = Math.cos(rad), dy = Math.sin(rad);   // 금 방향
+            const nx = -dy, ny = dx;                          // 수직(지그재그용)
+            const reach = Math.hypot(W, H);
+            // 검기는 화면 중앙을 각도 A로 지나감 → 금도 그 선을 따라 생김
+            const ox = W / 2;
+            const oy = H / 2;
+
+            const svg = document.createElementNS(svgNS, "svg");
+            svg.setAttribute("class", "crack");
+            svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+            svg.setAttribute("preserveAspectRatio", "none");
+
+            // 메인 금 (거의 곧게, 드물게 꺾임)
+            const segs = 9;
+            const pts = [];
+            let d = "";
+            for (let i = 0; i <= segs; i++) {
+                const t = (i / segs) * 2 - 1;   // -1 ~ 1
+                const jitter = (Math.random() - 0.5) * 16;
+                const px = ox + dx * reach * t + nx * jitter;
+                const py = oy + dy * reach * t + ny * jitter;
+                pts.push([px, py]);
+                d += (i === 0 ? "M" : "L") + px.toFixed(1) + " " + py.toFixed(1) + " ";
+            }
+            const main = document.createElementNS(svgNS, "path");
+            main.setAttribute("d", d);
+            svg.appendChild(main);
+
+            document.body.appendChild(svg);
+            cracks.push(svg);
+
+            // 쫙— 그어지는 애니메이션
+            svg.querySelectorAll("path").forEach((p) => {
+                const len = p.getTotalLength();
+                p.style.strokeDasharray = len;
+                p.style.strokeDashoffset = len;
+                p.getBoundingClientRect();   // reflow
+                p.style.transition = "stroke-dashoffset 0.3s ease-out";
+                p.style.strokeDashoffset = "0";
+            });
+        }
+
+        function clearCracks() {
+            cracks.forEach((c) => c.remove());
+            cracks = [];
+        }
+
+        // 중앙 충격파 링
+        function boomRing() {
+            const r = document.createElement("div");
+            r.className = "break-ring";
+            r.style.left = window.innerWidth / 2 + "px";
+            r.style.top = window.innerHeight / 2 + "px";
+            document.body.appendChild(r);
+            r.addEventListener("animationend", () => r.remove());
+        }
+
+        // 마지막 한 방: 박살 난타 → 대형 섬광 → 화면 딱 꺼졌다 → 켜지면서 휘치킹!!
+        function breakScreen() {
+            breaking = true;
+
+            // 1) 박살 직전 난타: 검기 여러 방 + 점점 세지는 흔들림
+            let f = 0;
+            const flurry = setInterval(() => {
+                spawnSlash(Math.random() * 180 - 90, true);
+                shake(16 + f * 5);
+                f++;
+                if (f >= 4) { clearInterval(flurry); powerCycle(); }
+            }, 65);
+
+            function powerCycle() {
+                // 2) 대형 충격파 + 강한 흔들림
+                boomRing();
+                shake(38);
+
+                const power = document.createElement("div");
+                power.className = "power";
+                const line = document.createElement("div");
+                line.className = "crt-line";
+                const dot = document.createElement("div");
+                dot.className = "crt-dot";
+                power.appendChild(line);
+                power.appendChild(dot);
+                document.body.appendChild(power);
+
+                // 3) OFF: 하얗게 번쩍 → 검게, 세로로 눌리고 가로로 점까지 수축
+                power.animate([
+                    { backgroundColor: "rgba(255,255,255,0.95)" },
+                    { backgroundColor: "rgba(255,255,255,0.95)", offset: 0.12 },
+                    { backgroundColor: "rgba(0,0,0,1)" }
+                ], { duration: 280, fill: "forwards", easing: "ease-in" });
+
+                line.animate([
+                    { transform: "translateY(-50%) scaleY(90) scaleX(1)", opacity: 0 },
+                    { transform: "translateY(-50%) scaleY(2) scaleX(1)", opacity: 1, offset: 0.5 },
+                    { transform: "translateY(-50%) scaleY(2) scaleX(0.02)", opacity: 1 }
+                ], { duration: 340, fill: "forwards", easing: "ease-in" });
+
+                // 점 남기고 검은 화면 동안 금 정리
+                setTimeout(() => {
+                    dot.animate([
+                        { opacity: 0, transform: "translate(-50%,-50%) scale(0)" },
+                        { opacity: 1, transform: "translate(-50%,-50%) scale(1)" }
+                    ], { duration: 120, fill: "forwards" });
+                    clearCracks();
+                }, 320);
+
+                // 4) 검은 화면 좀 더 유지 (긴장감) → 5) ON: 점 → 가로선 → 대폭발 번쩍 + 플리커
+                setTimeout(() => {
+                    dot.animate([{ opacity: 1 }, { opacity: 0 }],
+                        { duration: 90, fill: "forwards" });
+
+                    line.animate([
+                        { transform: "translateY(-50%) scaleY(2) scaleX(0.02)", opacity: 1 },
+                        { transform: "translateY(-50%) scaleY(2) scaleX(1)", opacity: 1, offset: 0.22 },
+                        { transform: "translateY(-50%) scaleY(150) scaleX(1)", opacity: 1, offset: 0.7 },
+                        { transform: "translateY(-50%) scaleY(150) scaleX(1)", opacity: 0 }
+                    ], { duration: 560, fill: "forwards", easing: "ease-in" });
+
+                    const on = power.animate([
+                        { backgroundColor: "rgba(0,0,0,1)" },
+                        { backgroundColor: "rgba(255,255,255,1)", offset: 0.45 },
+                        { backgroundColor: "rgba(200,240,255,0.6)", offset: 0.62 },
+                        { backgroundColor: "rgba(255,255,255,0)" }
+                    ], { duration: 600, fill: "forwards", easing: "ease-out" });
+
+                    // 켜질 때 전원 플리커
+                    setTimeout(() => {
+                        power.animate(
+                            [{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 },
+                             { opacity: 0.6 }, { opacity: 1 }],
+                            { duration: 200 }
+                        );
+                    }, 320);
+
+                    on.onfinish = () => {
+                        power.remove();
+                        shake(12);        // 켜지는 순간 마무리 진동
+                        breaking = false;
+                    };
+                }, 760);
+            }
+        }
+
+        knife.addEventListener("click", () => {
+            if (breaking) return;
+
+            // 새 세션(금 0개)의 첫 베기마다 색깔 랜덤 결정 → 그 세션 6번은 한 색으로 통일
+            // (박살 후 리셋되면 다음 세션에서 다시 뽑음 → 검보라/검빨 번갈아 나올 수 있음)
+            if (cracks.length === 0) {
+                document.body.classList.toggle("slash-red", Math.random() < 0.5);
+            }
+
+            // 칼 휘두르기
+            knife.classList.remove("swing");
+            void knife.offsetWidth;
+            knife.classList.add("swing");
+
+            const willBreak = cracks.length + 1 >= BREAK_AT;
+            const A = Math.random() * 160 - 80;
+
+            // 검기 한 방 (마지막이면 굵게)
+            spawnSlash(A, willBreak);
+            // 금이 쌓일수록 더 세게 흔들
+            shake(6 + cracks.length * 2.5);
+            // 검기 자리에 금 추가
+            addCrack(A);
+
+            // 박살 직전까지 다 채웠으면 → 껐다 켜기
+            if (willBreak) {
+                setTimeout(breakScreen, 240);
             }
         });
 
 
-        // 다시 원래대로 (글자들이 다시 위에서 뚝뚝 떨어짐)
-        reset.addEventListener("click", () => {
-            if (!exploded) return;
-
-            boom.classList.remove("show");
-            reset.classList.remove("show");
-
-            // 물리 루프 정지
-            if (rafId) cancelAnimationFrame(rafId);
-            rafId = null;
-            parts = [];
-
-            // 원래 스타일로 복원 → CSS의 drop 애니메이션이 다시 재생됨
-            pieces.forEach((el, i) => {
-                if (origStyle[i] === null) {
-                    el.removeAttribute("style");
-                } else {
-                    el.setAttribute("style", origStyle[i]);
-                }
-            });
-
-            exploded = false;
-        });
     </script>
 
 
