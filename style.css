@@ -220,8 +220,9 @@ button:hover {
     background: none;
     border: none;
 
-    font-size: 34px;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     cursor: pointer;
     padding: 0;
@@ -229,6 +230,29 @@ button:hover {
 
     transition: transform 0.2s ease;
     z-index: 10;
+}
+
+.bomb .bombicon {
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5));
+}
+
+/* 심지 불꽃: 지글지글 깜빡이며 불타는 글로우 */
+.bomb .fuse-spark {
+    fill: #ffe08a;
+    transform-box: fill-box;
+    transform-origin: center;
+    filter:
+        drop-shadow(0 0 3px #ff9d2e)
+        drop-shadow(0 0 7px #ff5a1a)
+        drop-shadow(0 0 12px rgba(255,90,26,0.6));
+    animation: fuseSpark 0.42s infinite alternate;
+}
+
+@keyframes fuseSpark {
+    0%   { transform: scale(0.8);  opacity: 0.8; }
+    100% { transform: scale(1.18); opacity: 1; }
 }
 
 .bomb:hover {
@@ -263,8 +287,9 @@ button:hover {
     background: none;
     border: none;
 
-    font-size: 34px;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     cursor: pointer;
     padding: 0;
@@ -273,6 +298,62 @@ button:hover {
     transition: transform 0.15s ease;
     z-index: 10;
 }
+
+.knife-btn .katana {
+    --ki: #b06bff;                 /* 검기 색 (기본: 보라) */
+    width: 46px;
+    height: 46px;
+    transform: rotate(8deg);
+    overflow: visible;
+    filter:
+        drop-shadow(0 0 5px rgba(125,31,214,0.9))
+        drop-shadow(0 0 11px rgba(125,31,214,0.45));
+    transition: filter 0.2s ease;
+}
+
+/* 검빨 세션이면 칼 글로우 + 검기 색도 빨갛게 */
+body.slash-red .knife-btn .katana {
+    --ki: #ff466a;
+    filter:
+        drop-shadow(0 0 5px rgba(216,26,61,0.9))
+        drop-shadow(0 0 11px rgba(216,26,61,0.45));
+}
+
+/* 검기 아크 — 반복해서 휘익 스쳐 지나감 */
+.katana .ki-arc {
+    fill: none;
+    stroke: var(--ki);
+    stroke-linecap: round;
+    transform-box: fill-box;
+    transform-origin: 22% 78%;      /* 손잡이 쪽을 축으로 휘두름 */
+    opacity: 0;
+    filter: drop-shadow(0 0 3px var(--ki));
+    animation: kiSlash 2.4s cubic-bezier(.2,.7,.25,1) infinite;
+}
+.katana .ki1 { stroke-width: 2.6; }
+.katana .ki2 { stroke-width: 1.6; animation-delay: 0.07s; }
+.katana .ki3 { stroke-width: 1;   animation-delay: 0.14s; }
+
+@keyframes kiSlash {
+    0%   { opacity: 0;    transform: translate(-5px, 4px) scaleX(0.6) rotate(-4deg); }
+    12%  { opacity: 1; }
+    32%  { opacity: 0.85; transform: translate(0, 0) scaleX(1) rotate(0deg); }
+    50%  { opacity: 0;    transform: translate(6px, -3px) scaleX(1.2) rotate(3deg); }
+    100% { opacity: 0;    transform: translate(6px, -3px) scaleX(1.2) rotate(3deg); }
+}
+
+/* 날 광택이 은은하게 반짝 */
+.katana .hamon {
+    animation: hamonSheen 2.4s ease-in-out infinite;
+}
+@keyframes hamonSheen {
+    0%, 100% { opacity: 0.5; }
+    28%      { opacity: 1; }
+}
+
+/* 마우스 올리면 검기가 더 빠르고 사납게 */
+.knife-btn:hover .ki-arc { animation-duration: 0.9s; }
+.knife-btn:hover .hamon  { animation-duration: 0.9s; }
 
 .knife-btn:hover {
     transform: scale(1.2) rotate(-12deg);
@@ -612,14 +693,72 @@ body.slash-red .bolt path {
     margin: -20px 0 0 -20px;
 
     border-radius: 50%;
-    border: 8px solid rgba(185,22,60,0.95);
-    box-shadow: 0 0 40px rgba(95,0,28,0.85);
+    border: 8px solid rgba(150,70,240,0.95);
+    box-shadow: 0 0 40px rgba(90,20,180,0.85);
 
     pointer-events: none;
-    z-index: 62;
+    z-index: 92;
 
     transform: scale(0);
     animation: fxShock 0.7s cubic-bezier(.12,.7,.25,1) forwards;
+}
+
+/* 검빨 세션이면 충격파도 빨갛게 */
+body.slash-red .break-ring {
+    border-color: rgba(216,26,61,0.95);
+    box-shadow: 0 0 40px rgba(140,0,30,0.85);
+}
+
+/* 박살 직전: 쌓인 유리 금이 세션 색으로 확 달아오름 */
+.crack.ignite path {
+    --cg: #b06bff;
+    animation: crackIgnite 0.55s ease-out forwards;
+}
+body.slash-red .crack.ignite path { --cg: #ff466a; }
+
+@keyframes crackIgnite {
+    0% {
+        stroke: rgba(0,0,0,0.9);
+        stroke-width: 2.5;
+        filter: drop-shadow(0 0 1.2px rgba(255,255,255,0.85));
+    }
+    100% {
+        stroke: var(--cg);
+        stroke-width: 4.5;
+        filter:
+            drop-shadow(0 0 5px var(--cg))
+            drop-shadow(0 0 15px var(--cg));
+    }
+}
+
+/* 화면이 와장창 — 사방으로 튀는 유리 파편 */
+.shard {
+    --cg: #b06bff;
+    position: fixed;
+    z-index: 95;
+    pointer-events: none;
+
+    background: linear-gradient(135deg,
+        rgba(255,255,255,0.95),
+        rgba(190,200,220,0.35));
+    box-shadow: 0 0 7px 1px var(--cg);
+
+    will-change: transform, opacity;
+    animation: shardFly var(--dur, 0.7s) cubic-bezier(.12,.55,.25,1) forwards;
+}
+body.slash-red .shard { --cg: #ff466a; }
+
+@keyframes shardFly {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform:
+            translate(calc(-50% + var(--tx)), calc(-50% + var(--ty)))
+            rotate(var(--rot, 360deg)) scale(0.35);
+        opacity: 0;
+    }
 }
 
 
